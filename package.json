@@ -23,6 +23,7 @@
     "@eslint/js": "^10.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jimp": "^0.2.1",
     "@types/node": "^25.3.3",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
@@ -40,6 +41,7 @@
     "@types/multer": "^2.0.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "jimp": "^1.6.0",
     "multer": "^2.1.1"
   }
 }

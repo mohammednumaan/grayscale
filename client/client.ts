@@ -2,12 +2,9 @@ const API_URL = "http://localhost:3000/grayscale/upload";
 
 const form = document.getElementById("upload-form") as HTMLFormElement;
 const fileInput = document.getElementById("file-input") as HTMLInputElement;
+const fileNameEl = document.getElementById("file-name") as HTMLSpanElement;
 const uploadBtn = document.getElementById("upload-btn") as HTMLButtonElement;
 const statusEl = document.getElementById("status") as HTMLParagraphElement;
-const previewContainer = document.getElementById("preview") as HTMLDivElement;
-const previewImg = document.getElementById("preview-img") as HTMLImageElement;
-
-let currentObjectURL: string | null = null;
 
 function setStatus(message: string, type: "success" | "error" | "") {
   statusEl.textContent = message;
@@ -15,20 +12,8 @@ function setStatus(message: string, type: "success" | "error" | "") {
 }
 
 fileInput.addEventListener("change", () => {
-  if (currentObjectURL) {
-    URL.revokeObjectURL(currentObjectURL);
-    currentObjectURL = null;
-  }
-
   const file = fileInput.files?.[0];
-  if (file) {
-    currentObjectURL = URL.createObjectURL(file);
-    previewImg.src = currentObjectURL;
-    previewContainer.style.display = "block";
-  } else {
-    previewImg.src = "";
-    previewContainer.style.display = "none";
-  }
+  fileNameEl.textContent = file ? file.name : "No file selected";
 });
 
 form.addEventListener("submit", async (e: Event) => {
