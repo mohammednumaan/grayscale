@@ -6,10 +6,7 @@ export async function grayscaleImage(imageBuffer: Buffer) {
 		const image = await Jimp.fromBuffer(imageBuffer);
 		await image.greyscale().write('output-grayscale.png');
 	}
-
 	catch (err) {
 		console.error('Error', err);
 	}
-
-
 }

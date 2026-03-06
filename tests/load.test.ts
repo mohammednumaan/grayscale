@@ -2,12 +2,16 @@ import http from 'k6/http'
 import { check } from 'k6'
 
 const SERVER_URL = "http://localhost:3000/grayscale/upload";
-const image = open('./crusher_joe_image.jpeg', 'b');
+const image = open('./test_image.jpg', 'b');
 
-export const options = {
-	vus: 200,
-	duration: '30s'
-}
+export let options = {
+	stages: [
+		{ duration: '15s', target: 5 },
+		{ duration: '30s', target: 20 },
+		{ duration: '1m', target: 0 }
+	]
+
+};
 
 export default function() {
 	const payload = {
@@ -16,7 +20,7 @@ export default function() {
 
 	const res = http.post(SERVER_URL, payload);
 	check(res, {
-		'Post status is 200': (r) => res.status === 200,
+		'status is 200': (r) => r.status === 200,
+		'response contains success message': (r) => r.body.message === "File uploaded successfully"
 	})
-
 }
