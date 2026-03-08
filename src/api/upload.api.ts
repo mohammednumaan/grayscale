@@ -1,7 +1,10 @@
 import { Router } from 'express';
-import multer from 'multer';
-import grayscaleQueue from '../queue.js';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+
+import grayscaleQueue from '../connections/queue.js';
+import cloudinaryConn from '../connections/cloudinary.js';
+
 import type { FileMetadata } from '../types/types.js';
 
 const router = Router();
@@ -22,7 +25,9 @@ router.post('/upload', upload.single('image'), async (req, res) => {
 		filePath: req.file.path
 	}
 
-	await grayscaleQueue.add("grayscale-job", { data: metadata });
+	// 1. upload the file to Cloudinary
+	// 2. add a job to the queue with the file metadata
+	// 3. return the response to the client
 	return res.json({ message: "File uploaded successfully", filename: req.file.originalname });
 });
 
