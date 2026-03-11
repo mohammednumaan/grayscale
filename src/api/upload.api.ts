@@ -2,13 +2,15 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 
-import grayscaleQueue from '../connections/queue.js';
-import cloudinaryConn from '../connections/cloudinary.js';
+import grayscaleQueue from '../conn/queue.conn.js';
+import cloudinaryConn from '../conn/cloudinary.conn.js';
 
 import type { FileMetadata } from '../types/types.js';
+import CloudinaryStorageEngine from '../storage/cloudinary-engine.js';
 
 const router = Router();
-const upload = multer({ dest: '../../uploads/' });
+const storage = new CloudinaryStorageEngine();
+const upload = multer({ storage });
 
 router.post('/upload', upload.single('image'), async (req, res) => {
 	if (!req.file) {
