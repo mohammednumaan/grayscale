@@ -1,11 +1,18 @@
 interface FileMetadata {
-	id: string;
-	name: string;
+	id: number;
+	filename: string;
 	size: number;
-	type: string;
-	createdAt: Date;
-	updatedAt: Date;
-	filePath: string;
+	uploaded_at: Date;
+	updated_at: Date;
+	file_path: string;
 }
 
-export { type FileMetadata };
+interface FileJobs {
+	id: number;
+	file_id: number;
+	status: "pending" | "processing" | "completed" | "failed";
+	created_at: Date;
+	updated_at: Date;
+}
+
+export { type FileMetadata, type FileJobs };
