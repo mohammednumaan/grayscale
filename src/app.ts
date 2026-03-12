@@ -1,12 +1,10 @@
-import express, { type Request, type Response } from "express";
+import express from "express";
 import cors from "cors";
-import multer from "multer";
 
 import { configDotenv } from "dotenv";
 import uploadRouter from "./api/upload.api.js";
-import pool from "./conn/pg.conn.js";
+import signedRouter from "./api/signed.api.js";
 
-import { grayscaleImage } from "./utils/grayscale.utils.js";
 configDotenv();
 
 const app = express();
@@ -15,8 +13,10 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// endpoint to handle image upload and processing
+// endpoint to handle upload completion (metadata persistence)
 app.use("/grayscale", uploadRouter);
+// endpoint to generate signed upload credentials for direct Cloudinary uploads
+app.use("/grayscale/api", signedRouter);
 
 app.listen(PORT, () => {
   console.log(`[Server]: Running on port ${PORT}`);
