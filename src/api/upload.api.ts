@@ -30,7 +30,7 @@ router.post("/upload", async (req, res) => {
 			jobId: fileJob.id,
 			filePath: fileMetadata.file_path,
 		})
-		return res.json({ message: "File metadata saved successfully", filename });
+		return res.json({ message: "File metadata saved successfully", filename, jobId: fileJob.id });
 	} catch (error) {
 		console.error("Error saving file metadata:", error);
 		return res.status(500).json({ error: "Failed to save file metadata" });

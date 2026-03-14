@@ -1,185 +1,247 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Grayscale</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grayscale</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      font-family:
+        system-ui,
+        -apple-system,
+        sans-serif;
+      display: flex;
+      color: #222;
+    }
+
+    /* ---- Left panel: upload controls ---- */
+    .panel-left {
+      width: 50%;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 4rem;
+      border-right: 1px solid #e0e0e0;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.4rem;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #888;
+      margin-bottom: 2.5rem;
+    }
+
+    .file-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #666;
+      margin-bottom: 0.6rem;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-btn {
+      display: inline-block;
+      padding: 0.55rem 1.2rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      color: #333;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition:
+        border-color 0.15s,
+        background 0.15s;
+    }
+
+    .file-btn:hover {
+      border-color: #999;
+      background: #f5f5f5;
+    }
+
+    .file-name {
+      display: inline-block;
+      margin-left: 0.75rem;
+      font-size: 0.82rem;
+      color: #888;
+    }
+
+    .file-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .upload-btn {
+      padding: 0.6rem 2rem;
+      background: #222;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      align-self: flex-start;
+    }
+
+    .upload-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .upload-btn:hover:not(:disabled) {
+      background: #444;
+    }
+
+    #status {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      min-height: 1.2em;
+    }
+
+    .success {
+      color: #4a4a4a;
+      font-weight: 500;
+    }
+
+    .error {
+      color: #777;
+      font-weight: 500;
+    }
+
+    /* ---- Right panel: output placeholder ---- */
+    .panel-right {
+      width: 50%;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .placeholder {
+      text-align: center;
+      color: #aaa;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .placeholder span {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.4;
+    }
+
+    .placeholder.hidden {
+      display: none;
+    }
+
+    .result-image {
+      max-width: 90%;
+      max-height: 90%;
+      border-radius: 6px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.97);
       }
 
-      html,
-      body {
-        height: 100%;
+      to {
+        opacity: 1;
+        transform: scale(1);
       }
+    }
 
-      body {
-        font-family:
-          system-ui,
-          -apple-system,
-          sans-serif;
-        display: flex;
-        color: #222;
-      }
+    .processing {
+      font-style: italic;
+    }
 
-      /* ---- Left panel: upload controls ---- */
-      .panel-left {
-        width: 50%;
-        background: #fafafa;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        padding: 4rem;
-        border-right: 1px solid #e0e0e0;
-      }
+    /* ---- Original image preview ---- */
+    .preview-container {
+      margin-top: 1.5rem;
+    }
 
-      h1 {
-        font-size: 1.6rem;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-        margin-bottom: 0.4rem;
-      }
+    .preview-container.hidden {
+      display: none;
+    }
 
-      .subtitle {
-        font-size: 0.85rem;
-        color: #888;
-        margin-bottom: 2.5rem;
-      }
+    .preview-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #666;
+      margin-bottom: 0.5rem;
+    }
 
-      .file-label {
-        font-size: 0.8rem;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #666;
-        margin-bottom: 0.6rem;
-      }
+    .preview-image {
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+      animation: fadeIn 0.3s ease;
+    }
+  </style>
+</head>
 
-      input[type="file"] {
-        display: none;
-      }
+<body>
+  <div class="panel-left">
+    <h1>Grayscale</h1>
+    <p class="subtitle">Convert color images to grayscale</p>
 
-      .file-btn {
-        display: inline-block;
-        padding: 0.55rem 1.2rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        background: #fff;
-        color: #333;
-        font-size: 0.85rem;
-        cursor: pointer;
-        transition:
-          border-color 0.15s,
-          background 0.15s;
-      }
-
-      .file-btn:hover {
-        border-color: #999;
-        background: #f5f5f5;
-      }
-
-      .file-name {
-        display: inline-block;
-        margin-left: 0.75rem;
-        font-size: 0.82rem;
-        color: #888;
-      }
-
-      .file-row {
-        display: flex;
-        align-items: center;
-        margin-bottom: 1.5rem;
-      }
-
-      .upload-btn {
-        padding: 0.6rem 2rem;
-        background: #222;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: background 0.15s;
-        align-self: flex-start;
-      }
-
-      .upload-btn:disabled {
-        opacity: 0.4;
-        cursor: not-allowed;
-      }
-
-      .upload-btn:hover:not(:disabled) {
-        background: #444;
-      }
-
-      #status {
-        margin-top: 1rem;
-        font-size: 0.85rem;
-        min-height: 1.2em;
-      }
-
-      .success {
-        color: #4a4a4a;
-        font-weight: 500;
-      }
-
-      .error {
-        color: #777;
-        font-weight: 500;
-      }
-
-      /* ---- Right panel: output placeholder ---- */
-      .panel-right {
-        width: 50%;
-        background: #f0f0f0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      .placeholder {
-        text-align: center;
-        color: #aaa;
-        font-size: 0.9rem;
-        line-height: 1.6;
-      }
-
-      .placeholder span {
-        display: block;
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-        opacity: 0.4;
-      }
-    </style>
-  </head>
-  <body>
-    <div class="panel-left">
-      <h1>Grayscale</h1>
-      <p class="subtitle">Convert color images to grayscale</p>
-
-      <form id="upload-form">
-        <p class="file-label">Image</p>
-        <div class="file-row">
-          <label class="file-btn" for="file-input">Choose file</label>
-          <input type="file" id="file-input" accept="image/*" />
-          <span class="file-name" id="file-name">No file selected</span>
-        </div>
-        <button type="submit" class="upload-btn" id="upload-btn">Upload</button>
-      </form>
-
-      <p id="status"></p>
-    </div>
-
-    <div class="panel-right">
-      <div class="placeholder">
-        <span>&#9638;</span>
-        Processed image will appear here
+    <form id="upload-form">
+      <p class="file-label">Image</p>
+      <div class="file-row">
+        <label class="file-btn" for="file-input">Choose file</label>
+        <input type="file" id="file-input" accept="image/*" />
+        <span class="file-name" id="file-name">No file selected</span>
       </div>
-    </div>
+      <button type="submit" class="upload-btn" id="upload-btn">Upload</button>
+    </form>
 
-    <script src="dist/client.js"></script>
-  </body>
+    <p id="status"></p>
+
+    <div class="preview-container hidden" id="preview-container">
+      <p class="preview-label">Original</p>
+      <img id="preview-image" class="preview-image" alt="Original preview" />
+    </div>
+  </div>
+
+  <div class="panel-right" id="panel-right">
+    <div class="placeholder" id="placeholder">
+      <span>&#9638;</span>
+      Processed image will appear here
+    </div>
+  </div>
+
+  <script src="dist/client.js"></script>
+</body>
+
 </html>

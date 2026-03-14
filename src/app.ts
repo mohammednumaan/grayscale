@@ -4,6 +4,7 @@ import cors from "cors";
 import { configDotenv } from "dotenv";
 import uploadRouter from "./api/upload.api.js";
 import signedRouter from "./api/signed.api.js";
+import statusRouter from "./api/status.api.js";
 import { ExpressAdapter } from "@bull-board/express";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
@@ -32,6 +33,9 @@ app.use("/grayscale", uploadRouter);
 
 // endpoint to generate signed upload credentials for direct Cloudinary uploads
 app.use("/grayscale/api", signedRouter);
+
+// endpoint to poll for job status and processed image URL
+app.use("/grayscale", statusRouter);
 
 
 

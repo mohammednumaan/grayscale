@@ -26,6 +26,17 @@ async function getAllFileMetadata(): Promise<FileMetadata[]> {
 	return rows as FileMetadata[];
 }
 
+async function updateFileMetadata(file_path: string, id: number): Promise<FileMetadata> {
+	const { rows } = await pool.query(
+		`UPDATE file_metadata SET file_path = $1, updated_at = NOW()
+		 WHERE id = (SELECT file_id FROM file_jobs WHERE id = $2)
+		 RETURNING *`,
+		[file_path, id],
+	);
+
+	return rows[0] as FileMetadata;
+}
+
 async function deleteFileMetadata(id: number): Promise<boolean> {
 	const { rowCount } = await pool.query(
 		`DELETE FROM file_metadata WHERE id = $1`,
@@ -85,6 +96,7 @@ export {
 	insertFileMetadata,
 	getFileMetadataById,
 	getAllFileMetadata,
+	updateFileMetadata,
 	deleteFileMetadata,
 	insertFileJob,
 	getFileJobById,
