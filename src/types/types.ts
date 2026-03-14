@@ -15,4 +15,9 @@ interface FileJobs {
 	updated_at: Date;
 }
 
-export { type FileMetadata, type FileJobs };
+interface FileJobData {
+	jobId: number;
+	filePath: string;
+}
+
+export { type FileMetadata, type FileJobs, type FileJobData };

@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/app.ts",
+	"worker": "tsx watch src/worker.ts",
     "build:client": "tsc --project client/tsconfig.json"
   },
   "repository": {
