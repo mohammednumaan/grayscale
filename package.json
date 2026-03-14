@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/app.ts",
-	"worker": "tsx watch src/worker.ts",
+    "worker": "tsx watch src/worker.ts",
     "build:client": "tsc --project client/tsconfig.json"
   },
   "repository": {
@@ -42,6 +42,8 @@
     "typescript-eslint": "^8.56.1"
   },
   "dependencies": {
+    "@bull-board/api": "^6.20.5",
+    "@bull-board/express": "^6.20.5",
     "bullmq": "^5.70.4",
     "cloudinary": "^2.9.0",
     "cors": "^2.8.6",
