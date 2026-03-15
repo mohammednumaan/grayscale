@@ -46,6 +46,7 @@
     "@bull-board/express": "^6.20.5",
     "bullmq": "^5.70.4",
     "cloudinary": "^2.9.0",
+    "cluster": "^0.7.7",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "jimp": "^1.6.0",

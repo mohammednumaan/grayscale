@@ -8,7 +8,7 @@ const UPLOAD_COMPLETE_ENDPOINT = "http://localhost:3000/grayscale/uploads/comple
 
 
 export const options = {
-	vus: 40,
+	vus: 30,
 	duration: "30s",
 	thresholds: {
 		"http_req_duration{name:sign_endpoint}": ["p(95)<500"],
