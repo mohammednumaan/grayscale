@@ -3,7 +3,6 @@ import cors from "cors";
 
 import { configDotenv } from "dotenv";
 import uploadRouter from "./api/upload.api.js";
-import signedRouter from "./api/signed.api.js";
 import statusRouter from "./api/status.api.js";
 import { ExpressAdapter } from "@bull-board/express";
 import { createBullBoard } from "@bull-board/api";
@@ -27,21 +26,13 @@ createBullBoard({
 })
 
 app.use("/admin/queues", serverAdapter.getRouter());
-
-// endpoint to handle upload completion (metadata persistence)
-app.use("/grayscale", uploadRouter);
-
-// endpoint to generate signed upload credentials for direct Cloudinary uploads
-app.use("/grayscale/api", signedRouter);
-
-// endpoint to poll for job status and processed image URL
+app.use('/grayscale/uploads', uploadRouter);
 app.use("/grayscale", statusRouter);
 
 
-
 app.listen(PORT, () => {
+	console.log(`[Process]: Process PID is ${process.pid}`);
 	console.log(`[Server]: Running on port ${PORT}`);
 	console.log(`[BullMQ]: Available at http://localhost:${PORT}/admin/queues`);
 });
 
-console.log(`This process is pid ${process.pid}`);

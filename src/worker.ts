@@ -13,7 +13,6 @@ const worker = new Worker("grayscale-queue", async (job: Job<FileJobData>) => {
 	}
 
 	const responseBuffer = await response.arrayBuffer();
-
 	const image = await Jimp.fromBuffer(responseBuffer);
 	image.greyscale();
 
@@ -22,21 +21,24 @@ const worker = new Worker("grayscale-queue", async (job: Job<FileJobData>) => {
 		const uploadStream = cloudinary.uploader.upload_stream({ folder: "grayscale-uploads" }, (error, result) => {
 			if (error) {
 				reject(error);
-			} else if (result) {
+			}
+			else if (result) {
 				resolve(result);
-			} else {
+			}
+			else {
 				reject(new Error("Cloudinary upload returned no result"));
 			}
 		});
+
 		uploadStream.end(finalImageBuffer);
 	});
 
 	await updateFileMetadata(uploadResult.secure_url, job.data.jobId);
 	return uploadResult;
-}, { connection: { host: 'localhost', port: 6379 } });
+
+}, { connection: { host: 'localhost', port: 6379 }, removeOnComplete: { count: 10 } });
 
 worker.on("completed", async (job, result) => {
-	console.log(`Job ${job.id} completed with result:`, result);
 	await updateFileJobStatus(job.data.jobId, "completed");
 });
 
