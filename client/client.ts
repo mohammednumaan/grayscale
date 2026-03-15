@@ -1,18 +1,24 @@
-const SIGN_URL = "http://localhost:3000/grayscale/api/sign";
-const UPLOAD_COMPLETE_URL = "http://localhost:3000/grayscale/upload";
+const SIGN_URL = "http://localhost:3000/grayscale/uploads/sign";
+const UPLOAD_COMPLETE_URL = "http://localhost:3000/grayscale/uploads/complete";
 const STATUS_URL = "http://localhost:3000/grayscale/status";
 
 const POLL_INTERVAL_MS = 2000;
 
+// DOM Elements
 const form = document.getElementById("upload-form") as HTMLFormElement;
 const fileInput = document.getElementById("file-input") as HTMLInputElement;
-const fileNameEl = document.getElementById("file-name") as HTMLSpanElement;
+const dropzone = document.getElementById("dropzone") as HTMLDivElement;
+const selectFileBtn = document.getElementById("select-file-btn") as HTMLButtonElement;
+const fileNameEl = document.getElementById("file-name") as HTMLDivElement;
+const fileSizeEl = document.getElementById("file-size") as HTMLDivElement;
+const changeFileBtn = document.getElementById("change-file-btn") as HTMLButtonElement;
 const uploadBtn = document.getElementById("upload-btn") as HTMLButtonElement;
-const statusEl = document.getElementById("status") as HTMLParagraphElement;
-const placeholderEl = document.getElementById("placeholder") as HTMLDivElement;
-const panelRight = document.getElementById("panel-right") as HTMLDivElement;
-const previewContainer = document.getElementById("preview-container") as HTMLDivElement;
+const statusEl = document.getElementById("status") as HTMLSpanElement;
+
+const comparisonSection = document.getElementById("comparison") as HTMLElement;
 const previewImage = document.getElementById("preview-image") as HTMLImageElement;
+const resultBody = document.getElementById("result-body") as HTMLDivElement;
+const processingIndicator = document.getElementById("processing-indicator") as HTMLDivElement;
 
 interface SignResponse {
 	signature: string;
@@ -43,107 +49,137 @@ interface StatusResponse {
 	filename: string | null;
 }
 
-function setStatus(message: string, type: "success" | "error" | "") {
+function setStatus(message: string, type: "success" | "error" | "processing" | "") {
 	statusEl.textContent = message;
 	statusEl.className = type;
 }
 
-function showProcessedImage(url: string) {
-	placeholderEl.classList.add("hidden");
+function formatBytes(bytes: number, decimals = 2) {
+	if (bytes === 0) return "0 Bytes";
+	const k = 1024;
+	const dm = decimals < 0 ? 0 : decimals;
+	const sizes = ["Bytes", "KB", "MB", "GB"];
+	const i = Math.floor(Math.log(bytes) / Math.log(k));
+	return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i];
+}
 
-	const existing = panelRight.querySelector(".result-image");
-	if (existing) existing.remove();
+function handleFileSelect(file: File) {
+	if (!file.type.startsWith("image/")) {
+		setStatus("Please select an image file.", "error");
+		return;
+	}
 
+	// Update UI to show selected file
+	fileNameEl.textContent = file.name;
+	fileSizeEl.textContent = formatBytes(file.size);
+	dropzone.classList.add("has-file");
+
+	// Show original preview
+	if (previewImage.src) {
+		URL.revokeObjectURL(previewImage.src);
+	}
+	previewImage.src = URL.createObjectURL(file);
+	comparisonSection.classList.add("visible");
+
+	// Reset result panel
+	resetResultPanel();
+	setStatus("", "");
+}
+
+function resetResultPanel() {
+	const existingImg = resultBody.querySelector("img");
+	if (existingImg) existingImg.remove();
+	processingIndicator.classList.remove("active");
+}
+
+function showProcessing() {
+	resetResultPanel();
+	processingIndicator.classList.add("active");
+	setStatus("Processing image...", "processing");
+}
+
+function showResult(url: string) {
+	processingIndicator.classList.remove("active");
 	const img = document.createElement("img");
 	img.src = url;
 	img.alt = "Grayscale result";
-	img.className = "result-image";
-	panelRight.appendChild(img);
+	resultBody.appendChild(img);
+	setStatus("Conversion successful!", "success");
 }
 
-function resetRightPanel() {
-	const existing = panelRight.querySelector(".result-image");
-	if (existing) existing.remove();
-	placeholderEl.classList.remove("hidden");
-}
+// Event Listeners
 
-async function pollForResult(jobId: number): Promise<void> {
-	setStatus("Processing image...", "");
-	statusEl.classList.add("processing");
+// Drag & Drop
+dropzone.addEventListener("dragover", (e) => {
+	e.preventDefault();
+	dropzone.classList.add("dragover");
+});
 
-	return new Promise((resolve, reject) => {
-		const interval = setInterval(async () => {
-			try {
-				const res = await fetch(`${STATUS_URL}/${jobId}`);
-				if (!res.ok) {
-					clearInterval(interval);
-					reject(new Error(`Status check failed (${res.status})`));
-					return;
-				}
+dropzone.addEventListener("dragleave", () => {
+	dropzone.classList.remove("dragover");
+});
 
-				const data: StatusResponse = await res.json();
-
-				if (data.status === "completed" && data.processedUrl) {
-					clearInterval(interval);
-					showProcessedImage(data.processedUrl);
-					setStatus("Processing complete!", "success");
-					statusEl.classList.remove("processing");
-					resolve();
-				} else if (data.status === "failed") {
-					clearInterval(interval);
-					statusEl.classList.remove("processing");
-					reject(new Error("Image processing failed on the server"));
-				}
-			} catch (err) {
-				clearInterval(interval);
-				statusEl.classList.remove("processing");
-				reject(err);
-			}
-		}, POLL_INTERVAL_MS);
-	});
-}
-
-fileInput.addEventListener("change", () => {
-	const file = fileInput.files?.[0];
-	fileNameEl.textContent = file ? file.name : "No file selected";
-
-	if (file) {
-		if (previewImage.src) URL.revokeObjectURL(previewImage.src);
-		previewImage.src = URL.createObjectURL(file);
-		previewContainer.classList.remove("hidden");
-	} else {
-		previewContainer.classList.add("hidden");
-		previewImage.src = "";
+dropzone.addEventListener("drop", (e) => {
+	e.preventDefault();
+	dropzone.classList.remove("dragover");
+	const files = e.dataTransfer?.files;
+	if (files && files.length > 0) {
+		fileInput.files = files;
+		handleFileSelect(files[0]);
 	}
 });
 
+// Click on dropzone or select button to select file
+dropzone.addEventListener("click", (e) => {
+	const target = e.target as HTMLElement;
+	if (target === changeFileBtn || target === selectFileBtn || target === dropzone || dropzone.contains(target)) {
+		if (target !== changeFileBtn) {
+			fileInput.click();
+		}
+	}
+});
+
+selectFileBtn.addEventListener("click", (e) => {
+	e.stopPropagation();
+	fileInput.click();
+});
+
+changeFileBtn.addEventListener("click", (e) => {
+	e.stopPropagation();
+	fileInput.click();
+});
+
+fileInput.addEventListener("change", () => {
+	const file = fileInput.files?.[0];
+	if (file) {
+		handleFileSelect(file);
+	}
+});
+
+// Form Submission
 form.addEventListener("submit", async (e: Event) => {
 	e.preventDefault();
 
 	const files = fileInput.files;
 	if (!files || files.length === 0) {
-		setStatus("Please select a file first.", "error");
+		setStatus("Select an image first", "error");
 		return;
 	}
 
 	const file = files[0]!;
-
 	uploadBtn.disabled = true;
-	setStatus("Uploading...", "");
-	resetRightPanel();
+	showProcessing();
 
 	try {
-		const signRes = await fetch(SIGN_URL, { method: "POST" });
+		// 1. Get Signature
+		const signRes = await fetch(SIGN_URL);
 		if (!signRes.ok) {
-			const text = await signRes.text();
-			throw new Error(
-				`Failed to get upload signature (${signRes.status}): ${text}`,
-			);
+			throw new Error("Failed to get upload signature");
 		}
 		const signData: SignResponse = await signRes.json();
 
+		// 2. Upload to Cloudinary
 		const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`;
-
 		const formData = new FormData();
 		formData.append("file", file);
 		formData.append("api_key", signData.api_key);
@@ -158,14 +194,11 @@ form.addEventListener("submit", async (e: Event) => {
 		});
 
 		if (!uploadRes.ok) {
-			const text = await uploadRes.text();
-			throw new Error(
-				`Cloudinary upload failed (${uploadRes.status}): ${text}`,
-			);
+			throw new Error("Cloudinary upload failed");
 		}
-
 		const uploadData: CloudinaryUploadResponse = await uploadRes.json();
 
+		// 3. Notify Backend
 		const completeRes = await fetch(UPLOAD_COMPLETE_URL, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -177,21 +210,47 @@ form.addEventListener("submit", async (e: Event) => {
 		});
 
 		if (!completeRes.ok) {
-			const text = await completeRes.text();
-			throw new Error(
-				`Failed to save metadata (${completeRes.status}): ${text}`,
-			);
+			throw new Error("Failed to start processing");
 		}
-
 		const completeData: UploadCompleteResponse = await completeRes.json();
 
-		setStatus("Upload successful! Waiting for processing...", "success");
-
+		// 4. Poll for Result
 		await pollForResult(completeData.jobId);
+
 	} catch (err) {
-		const message = err instanceof Error ? err.message : "Unknown error";
-		setStatus(`Error: ${message}`, "error");
+		const message = err instanceof Error ? err.message : "Conversion failed";
+		setStatus(message, "error");
+		processingIndicator.classList.remove("active");
 	} finally {
 		uploadBtn.disabled = false;
 	}
 });
+
+async function pollForResult(jobId: number): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const interval = setInterval(async () => {
+			try {
+				const res = await fetch(`${STATUS_URL}/${jobId}`);
+				if (!res.ok) {
+					clearInterval(interval);
+					reject(new Error("Status check failed"));
+					return;
+				}
+
+				const data: StatusResponse = await res.json();
+
+				if (data.status === "completed" && data.processedUrl) {
+					clearInterval(interval);
+					showResult(data.processedUrl);
+					resolve();
+				} else if (data.status === "failed") {
+					clearInterval(interval);
+					reject(new Error("Processing failed on server"));
+				}
+			} catch (err) {
+				clearInterval(interval);
+				reject(err);
+			}
+		}, POLL_INTERVAL_MS);
+	});
+}

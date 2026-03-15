@@ -4,173 +4,353 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Grayscale — A minimal image processing utility that converts color images to grayscale." />
   <title>Grayscale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
   <style>
-    * {
+    /* ──────────────────────────────────────────
+       Reset & Base
+       ────────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
-    html,
-    body {
-      height: 100%;
+    html {
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
 
     body {
-      font-family:
-        system-ui,
-        -apple-system,
-        sans-serif;
-      display: flex;
-      color: #222;
-    }
-
-    /* ---- Left panel: upload controls ---- */
-    .panel-left {
-      width: 50%;
-      background: #fafafa;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #0e0e0e;
+      color: #e0e0e0;
+      min-height: 100vh;
       display: flex;
       flex-direction: column;
+      align-items: center;
       justify-content: center;
-      padding: 4rem;
-      border-right: 1px solid #e0e0e0;
+      padding: 2rem 1rem;
     }
 
-    h1 {
-      font-size: 1.6rem;
+    /* ──────────────────────────────────────────
+       Card Container
+       ────────────────────────────────────────── */
+    .card {
+      width: 100%;
+      max-width: 720px;
+      background: #171717;
+      border: 1px solid #2a2a2a;
+      border-radius: 16px;
+      padding: 2.5rem 2.5rem 2rem;
+      animation: cardIn 0.5s ease;
+    }
+
+    @keyframes cardIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ──────────────────────────────────────────
+       Header
+       ────────────────────────────────────────── */
+    .header {
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
       font-weight: 600;
-      letter-spacing: -0.02em;
-      margin-bottom: 0.4rem;
+      letter-spacing: -0.03em;
+      color: #f5f5f5;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    .subtitle {
+    .header h1 .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #555, #222);
+      font-size: 0.85rem;
+    }
+
+    .header p {
+      margin-top: 0.35rem;
+      font-size: 0.85rem;
+      color: #777;
+      font-weight: 300;
+    }
+
+    /* ──────────────────────────────────────────
+       Drop Zone
+       ────────────────────────────────────────── */
+    .dropzone {
+      border: 2px dashed #333;
+      border-radius: 12px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.25s, background 0.25s;
+      position: relative;
+    }
+
+    .dropzone:hover {
+      border-color: #555;
+      background: #1c1c1c;
+    }
+
+    .dropzone.dragover {
+      border-color: #888;
+      background: #1f1f1f;
+      border-style: solid;
+    }
+
+    .dropzone.has-file {
+      border-color: #444;
+      border-style: solid;
+      padding: 1.5rem;
+    }
+
+    .dropzone-icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.35;
+      transition: opacity 0.25s;
+    }
+
+    .dropzone:hover .dropzone-icon {
+      opacity: 0.55;
+    }
+
+    .dropzone-text {
       font-size: 0.85rem;
       color: #888;
-      margin-bottom: 2.5rem;
+      line-height: 1.6;
     }
 
-    .file-label {
-      font-size: 0.8rem;
+    .dropzone-text strong {
+      color: #bbb;
       font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+    }
+
+    .dropzone-hint {
+      font-size: 0.75rem;
+      color: #555;
+      margin-top: 0.5rem;
+    }
+
+    .dropzone.has-file .dropzone-icon,
+    .dropzone.has-file .dropzone-text,
+    .dropzone.has-file .dropzone-hint {
+      display: none;
+    }
+
+    /* File info shown inside dropzone after selecting */
+    .file-info {
+      display: none;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .dropzone.has-file .file-info {
+      display: flex;
+    }
+
+    .file-info-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      background: #252525;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .file-info-details {
+      flex: 1;
+      text-align: left;
+      min-width: 0;
+    }
+
+    .file-info-name {
+      font-size: 0.85rem;
+      color: #ccc;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-info-size {
+      font-size: 0.75rem;
       color: #666;
-      margin-bottom: 0.6rem;
+      margin-top: 0.1rem;
+    }
+
+    .file-info-change {
+      font-size: 0.75rem;
+      color: #888;
+      background: none;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 0.3rem 0.7rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .file-info-change:hover {
+      border-color: #666;
+      color: #bbb;
     }
 
     input[type="file"] {
       display: none;
     }
 
-    .file-btn {
-      display: inline-block;
-      padding: 0.55rem 1.2rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background: #fff;
-      color: #333;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition:
-        border-color 0.15s,
-        background 0.15s;
-    }
-
-    .file-btn:hover {
-      border-color: #999;
-      background: #f5f5f5;
-    }
-
-    .file-name {
-      display: inline-block;
-      margin-left: 0.75rem;
-      font-size: 0.82rem;
-      color: #888;
-    }
-
-    .file-row {
+    /* ──────────────────────────────────────────
+       Actions Row
+       ────────────────────────────────────────── */
+    .actions {
+      margin-top: 1.25rem;
       display: flex;
       align-items: center;
-      margin-bottom: 1.5rem;
+      gap: 1rem;
     }
 
-    .upload-btn {
-      padding: 0.6rem 2rem;
-      background: #222;
-      color: #fff;
+    .convert-btn {
+      padding: 0.6rem 1.6rem;
+      background: #e0e0e0;
+      color: #111;
       border: none;
-      border-radius: 4px;
-      font-size: 0.9rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s;
-      align-self: flex-start;
+      transition: background 0.2s, transform 0.15s;
     }
 
-    .upload-btn:disabled {
-      opacity: 0.4;
+    .convert-btn:hover:not(:disabled) {
+      background: #fff;
+      transform: translateY(-1px);
+    }
+
+    .convert-btn:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .convert-btn:disabled {
+      opacity: 0.3;
       cursor: not-allowed;
     }
 
-    .upload-btn:hover:not(:disabled) {
-      background: #444;
-    }
-
+    /* Status text */
     #status {
-      margin-top: 1rem;
-      font-size: 0.85rem;
-      min-height: 1.2em;
-    }
-
-    .success {
-      color: #4a4a4a;
-      font-weight: 500;
-    }
-
-    .error {
+      font-size: 0.8rem;
       color: #777;
-      font-weight: 500;
+      min-height: 1em;
     }
 
-    /* ---- Right panel: output placeholder ---- */
-    .panel-right {
-      width: 50%;
-      background: #f0f0f0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+    #status.success {
+      color: #8c8;
     }
 
-    .placeholder {
-      text-align: center;
+    #status.error {
+      color: #c88;
+    }
+
+    #status.processing {
       color: #aaa;
-      font-size: 0.9rem;
-      line-height: 1.6;
     }
 
-    .placeholder span {
-      display: block;
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-      opacity: 0.4;
-    }
-
-    .placeholder.hidden {
+    /* ──────────────────────────────────────────
+       Comparison / Preview Section
+       ────────────────────────────────────────── */
+    .comparison {
       display: none;
+      margin-top: 2rem;
+      gap: 1rem;
     }
 
-    .result-image {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 6px;
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
-      animation: fadeIn 0.4s ease;
+    .comparison.visible {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      animation: fadeUp 0.4s ease;
     }
 
-    @keyframes fadeIn {
+    @keyframes fadeUp {
       from {
         opacity: 0;
-        transform: scale(0.97);
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .preview-pane {
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #131313;
+    }
+
+    .preview-pane-header {
+      padding: 0.6rem 0.9rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #666;
+      border-bottom: 1px solid #2a2a2a;
+      background: #171717;
+    }
+
+    .preview-pane-body {
+      padding: 0.75rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 180px;
+      position: relative;
+    }
+
+    .preview-pane-body img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 4px;
+      animation: imgIn 0.35s ease;
+    }
+
+    @keyframes imgIn {
+      from {
+        opacity: 0;
+        transform: scale(0.96);
       }
 
       to {
@@ -179,67 +359,191 @@
       }
     }
 
-    .processing {
-      font-style: italic;
+    /* Placeholder for the grayscale result */
+    .result-placeholder {
+      text-align: center;
+      color: #444;
+      font-size: 0.8rem;
+      line-height: 1.6;
     }
 
-    /* ---- Original image preview ---- */
-    .preview-container {
-      margin-top: 1.5rem;
-    }
-
-    .preview-container.hidden {
+    .result-placeholder .dots {
       display: none;
     }
 
-    .preview-label {
-      font-size: 0.8rem;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #666;
-      margin-bottom: 0.5rem;
+    .result-placeholder.processing .dots {
+      display: inline;
     }
 
-    .preview-image {
-      max-width: 100%;
-      max-height: 200px;
-      border-radius: 4px;
-      border: 1px solid #e0e0e0;
-      animation: fadeIn 0.3s ease;
+    /* Processing dots animation */
+    @keyframes dotPulse {
+
+      0%,
+      80%,
+      100% {
+        opacity: 0.2;
+      }
+
+      40% {
+        opacity: 1;
+      }
+    }
+
+    .dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #888;
+      margin: 0 2px;
+      animation: dotPulse 1.4s infinite ease-in-out both;
+    }
+
+    .dot:nth-child(1) {
+      animation-delay: 0s;
+    }
+
+    .dot:nth-child(2) {
+      animation-delay: 0.16s;
+    }
+
+    .dot:nth-child(3) {
+      animation-delay: 0.32s;
+    }
+
+    .processing-indicator {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .processing-indicator.active {
+      display: flex;
+    }
+
+    .processing-indicator .label {
+      font-size: 0.75rem;
+      color: #666;
+    }
+
+    /* ──────────────────────────────────────────
+       Footer
+       ────────────────────────────────────────── */
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid #1e1e1e;
+      font-size: 0.7rem;
+      color: #444;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .footer a {
+      color: #666;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer a:hover {
+      color: #aaa;
+    }
+
+    /* ──────────────────────────────────────────
+       Responsive
+       ────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .card {
+        padding: 1.5rem;
+        border-radius: 12px;
+      }
+
+      .comparison.visible {
+        grid-template-columns: 1fr;
+      }
+
+      .dropzone {
+        padding: 2rem 1rem;
+      }
     }
   </style>
 </head>
 
 <body>
-  <div class="panel-left">
-    <h1>Grayscale</h1>
-    <p class="subtitle">Convert color images to grayscale</p>
+  <main class="card">
+    <!-- Header -->
+    <header class="header">
+      <h1>
+        <span class="icon">◐</span>
+        Grayscale
+      </h1>
+      <p>Drop an image, convert it to grayscale.</p>
+    </header>
 
+    <!-- Upload Form -->
     <form id="upload-form">
-      <p class="file-label">Image</p>
-      <div class="file-row">
-        <label class="file-btn" for="file-input">Choose file</label>
+      <!-- Drop Zone -->
+      <div class="dropzone" id="dropzone">
+        <div class="dropzone-icon">⬡</div>
+        <p class="dropzone-text">
+          Drag &amp; drop an image here
+        </p>
+        <button type="button" class="file-info-change" id="select-file-btn"
+          style="margin-top: 0.75rem; display: inline-block;">Select File</button>
+        <p class="dropzone-hint">Supports JPG, PNG, WebP</p>
         <input type="file" id="file-input" accept="image/*" />
-        <span class="file-name" id="file-name">No file selected</span>
+
+        <!-- File info (shown after selection) -->
+        <div class="file-info">
+          <div class="file-info-icon">🖼</div>
+          <div class="file-info-details">
+            <div class="file-info-name" id="file-name">—</div>
+            <div class="file-info-size" id="file-size">—</div>
+          </div>
+          <button type="button" class="file-info-change" id="change-file-btn">Change</button>
+        </div>
       </div>
-      <button type="submit" class="upload-btn" id="upload-btn">Upload</button>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button type="submit" class="convert-btn" id="upload-btn">Convert</button>
+        <span id="status"></span>
+      </div>
     </form>
 
-    <p id="status"></p>
+    <!-- Comparison Section -->
+    <section class="comparison" id="comparison">
+      <!-- Original Preview -->
+      <div class="preview-pane" id="original-pane">
+        <div class="preview-pane-header">Original</div>
+        <div class="preview-pane-body">
+          <img id="preview-image" alt="Original preview" />
+        </div>
+      </div>
 
-    <div class="preview-container hidden" id="preview-container">
-      <p class="preview-label">Original</p>
-      <img id="preview-image" class="preview-image" alt="Original preview" />
-    </div>
-  </div>
+      <!-- Grayscale Result -->
+      <div class="preview-pane" id="result-pane">
+        <div class="preview-pane-header">Grayscale</div>
+        <div class="preview-pane-body" id="result-body">
+          <div class="processing-indicator" id="processing-indicator">
+            <div class="dots">
+              <span class="dot"></span>
+              <span class="dot"></span>
+              <span class="dot"></span>
+            </div>
+            <span class="label">Processing…</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <div class="panel-right" id="panel-right">
-    <div class="placeholder" id="placeholder">
-      <span>&#9638;</span>
-      Processed image will appear here
-    </div>
-  </div>
+    <!-- Footer -->
+    <footer class="footer">
+      Built with Express, BullMQ &amp; Jimp — <a href="https://github.com/mohammednumaan/grayscale" target="_blank"
+        rel="noopener">View on GitHub</a>
+    </footer>
+  </main>
 
   <script src="dist/client.js"></script>
 </body>
