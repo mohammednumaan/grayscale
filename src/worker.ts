@@ -1,12 +1,12 @@
 import { Job, Worker } from "bullmq";
 import { type FileJobData } from "./types/types.js";
-import { Jimp } from "jimp";
 import cloudinary from "./conn/cloudinary.conn.js";
 import { updateFileMetadata, updateFileJobStatus } from "./db/query.db.js";
 import type { UploadApiResponse } from "cloudinary";
 import cluster from 'cluster'
 import os from 'os';
 import { Redis } from "ioredis";
+import sharp from "sharp";
 
 
 const numCPUs = os.cpus().length;
@@ -39,11 +39,8 @@ else {
 			throw new Error(`Failed to fetch image from ${job.data.filePath}: ${response.statusText}`);
 		}
 
-		const responseBuffer = await response.arrayBuffer();
-		const image = await Jimp.fromBuffer(responseBuffer);
-		image.greyscale();
-
-		const finalImageBuffer = await image.getBuffer("image/jpeg");
+		const responseBuffer = Buffer.from(await response.arrayBuffer());
+		const finalImageBuffer = await sharp(responseBuffer).grayscale().jpeg().toBuffer();
 		const uploadResult = await new Promise<UploadApiResponse>((resolve, reject) => {
 			const uploadStream = cloudinary.uploader.upload_stream({ folder: "grayscale-uploads" }, (error, result) => {
 				if (error) {
@@ -63,7 +60,7 @@ else {
 		await updateFileMetadata(uploadResult.secure_url, job.data.jobId);
 		return uploadResult;
 
-	}, { connection, concurrency: 5, removeOnComplete: { count: 10 } });
+	}, { connection, concurrency: 5, removeOnComplete: { count: 100 } });
 
 	worker.on("completed", async (job, result) => {
 		await updateFileJobStatus(job.data.jobId, "completed");
@@ -77,4 +74,3 @@ else {
 
 	console.log(`Worker ${process.pid} started`);
 }
-

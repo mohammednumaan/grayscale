@@ -71,10 +71,10 @@ router.post("/complete", async (req, res) => {
 			attempts: 3,
 			backoff: {
 				type: "exponential",
-				delay: 5000,
-				jitter: 0.5,
-			}
-
+				delay: 3000,
+			},
+			removeOnComplete: { count: 100 },
+			removeOnFail: { count: 200 },
 		})
 		return res.status(200).json({ message: "File metadata saved successfully", filename, jobId: fileJob.id });
 	} catch (error) {
