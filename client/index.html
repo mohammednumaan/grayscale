@@ -267,23 +267,99 @@
       cursor: not-allowed;
     }
 
-    /* Status text */
+    .feedback {
+      margin-top: 1rem;
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .status-banner {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0.8rem 0.9rem;
+      border: 1px solid #272727;
+      border-radius: 10px;
+      background: #121212;
+    }
+
     #status {
       font-size: 0.8rem;
       color: #777;
       min-height: 1em;
     }
 
-    #status.success {
+    .status-banner.success #status {
       color: #8c8;
     }
 
-    #status.error {
+    .status-banner.error #status {
       color: #c88;
     }
 
-    #status.processing {
+    .status-banner.processing #status {
       color: #aaa;
+    }
+
+    .messages {
+      display: none;
+      border: 1px solid #232323;
+      border-radius: 10px;
+      background: #111;
+      padding: 0.9rem;
+    }
+
+    .messages.visible {
+      display: block;
+    }
+
+    .messages-header {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #626262;
+      margin-bottom: 0.7rem;
+    }
+
+    .message-list {
+      list-style: none;
+      display: grid;
+      gap: 0.55rem;
+    }
+
+    .message-item {
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: #a0a0a0;
+      padding-left: 0.95rem;
+      position: relative;
+    }
+
+    .message-item::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #555;
+      position: absolute;
+      left: 0;
+      top: 0.45rem;
+    }
+
+    .message-item.success {
+      color: #9fd39f;
+    }
+
+    .message-item.success::before {
+      background: #7ba87b;
+    }
+
+    .message-item.error {
+      color: #df9c9c;
+    }
+
+    .message-item.error::before {
+      background: #bb6e6e;
     }
 
     /* ──────────────────────────────────────────
@@ -508,7 +584,17 @@
       <!-- Actions -->
       <div class="actions">
         <button type="submit" class="convert-btn" id="upload-btn">Convert</button>
-        <span id="status"></span>
+      </div>
+
+      <div class="feedback">
+        <div class="status-banner" id="status-banner">
+          <span id="status"></span>
+        </div>
+
+        <div class="messages" id="messages">
+          <div class="messages-header">Messages</div>
+          <ul class="message-list" id="message-list"></ul>
+        </div>
       </div>
     </form>
 

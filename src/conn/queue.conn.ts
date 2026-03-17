@@ -1,3 +1,8 @@
 import { Queue } from "bullmq";
-const grayscaleQueue = new Queue("grayscale-queue");
+import { getRedisConfig } from "./redis.conn.js";
+
+const grayscaleQueue = new Queue("grayscale-queue", {
+	connection: getRedisConfig(),
+});
+
 export default grayscaleQueue;

@@ -1,6 +1,6 @@
 const SIGN_URL = "http://localhost:3000/grayscale/uploads/sign";
 const UPLOAD_COMPLETE_URL = "http://localhost:3000/grayscale/uploads/complete";
-const STATUS_URL = "http://localhost:3000/grayscale/status";
+const STATUS_URL = "http://localhost:3000/grayscale/jobs/status";
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -14,6 +14,9 @@ const fileSizeEl = document.getElementById("file-size") as HTMLDivElement;
 const changeFileBtn = document.getElementById("change-file-btn") as HTMLButtonElement;
 const uploadBtn = document.getElementById("upload-btn") as HTMLButtonElement;
 const statusEl = document.getElementById("status") as HTMLSpanElement;
+const statusBanner = document.getElementById("status-banner") as HTMLDivElement;
+const messageList = document.getElementById("message-list") as HTMLUListElement;
+const messagePanel = document.getElementById("messages") as HTMLDivElement;
 
 const comparisonSection = document.getElementById("comparison") as HTMLElement;
 const previewImage = document.getElementById("preview-image") as HTMLImageElement;
@@ -36,8 +39,13 @@ interface CloudinaryUploadResponse {
 	original_filename: string;
 }
 
+interface CloudinaryErrorPayload {
+	error?: {
+		message?: string;
+	};
+}
+
 interface UploadCompleteResponse {
-	message: string;
 	filename: string;
 	jobId: number;
 }
@@ -49,9 +57,35 @@ interface StatusResponse {
 	filename: string | null;
 }
 
+interface ApiErrorResponse {
+	code: string;
+	description?: unknown;
+}
+
+interface ApiResponse<T> {
+	message: string;
+	statusCode: number;
+	success: boolean;
+	data?: T;
+	error?: ApiErrorResponse;
+}
+
 function setStatus(message: string, type: "success" | "error" | "processing" | "") {
 	statusEl.textContent = message;
-	statusEl.className = type;
+	statusBanner.className = type ? `status-banner ${type}` : "status-banner";
+}
+
+function clearMessages() {
+	messageList.innerHTML = "";
+	messagePanel.classList.remove("visible");
+}
+
+function addMessage(message: string, type: "info" | "success" | "error" = "info") {
+	const item = document.createElement("li");
+	item.className = `message-item ${type}`;
+	item.textContent = message;
+	messageList.appendChild(item);
+	messagePanel.classList.add("visible");
 }
 
 function formatBytes(bytes: number, decimals = 2) {
@@ -83,6 +117,7 @@ function handleFileSelect(file: File) {
 
 	// Reset result panel
 	resetResultPanel();
+	clearMessages();
 	setStatus("", "");
 }
 
@@ -96,6 +131,7 @@ function showProcessing() {
 	resetResultPanel();
 	processingIndicator.classList.add("active");
 	setStatus("Processing image...", "processing");
+	addMessage("Upload accepted. Waiting for the worker to finish the grayscale conversion.", "info");
 }
 
 function showResult(url: string) {
@@ -105,6 +141,34 @@ function showResult(url: string) {
 	img.alt = "Grayscale result";
 	resultBody.appendChild(img);
 	setStatus("Conversion successful!", "success");
+	addMessage("Processed image is ready.", "success");
+}
+
+function extractApiErrorMessage(error: ApiResponse<unknown>, fallback: string) {
+	if (typeof error.error?.description === "string" && error.error.description.length > 0) {
+		return error.error.description;
+	}
+
+	return error.message || fallback;
+}
+
+async function readApiResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
+	const payload = await response.json() as ApiResponse<T>;
+
+	if (!response.ok || !payload.success || payload.data === undefined) {
+		throw new Error(extractApiErrorMessage(payload, fallbackMessage));
+	}
+
+	return payload.data;
+}
+
+async function readCloudinaryError(response: Response, fallbackMessage: string) {
+	try {
+		const payload = await response.json() as CloudinaryErrorPayload;
+		return payload.error?.message || fallbackMessage;
+	} catch {
+		return fallbackMessage;
+	}
 }
 
 // Event Listeners
@@ -168,15 +232,18 @@ form.addEventListener("submit", async (e: Event) => {
 
 	const file = files[0]!;
 	uploadBtn.disabled = true;
+	clearMessages();
 	showProcessing();
 
 	try {
 		// 1. Get Signature
 		const signRes = await fetch(SIGN_URL);
-		if (!signRes.ok) {
-			throw new Error("Failed to get upload signature");
-		}
-		const signData: SignResponse = await signRes.json();
+		const signData = await readApiResponse<SignResponse>(
+			signRes,
+			"Failed to get upload signature",
+		);
+		addMessage("Upload signature received.", "info");
+		console.log(signData);
 
 		// 2. Upload to Cloudinary
 		const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`;
@@ -194,9 +261,10 @@ form.addEventListener("submit", async (e: Event) => {
 		});
 
 		if (!uploadRes.ok) {
-			throw new Error("Cloudinary upload failed");
+			throw new Error(await readCloudinaryError(uploadRes, "Cloudinary upload failed"));
 		}
 		const uploadData: CloudinaryUploadResponse = await uploadRes.json();
+		addMessage("Image uploaded to Cloudinary.", "info");
 
 		// 3. Notify Backend
 		const completeRes = await fetch(UPLOAD_COMPLETE_URL, {
@@ -209,10 +277,11 @@ form.addEventListener("submit", async (e: Event) => {
 			}),
 		});
 
-		if (!completeRes.ok) {
-			throw new Error("Failed to start processing");
-		}
-		const completeData: UploadCompleteResponse = await completeRes.json();
+		const completeData = await readApiResponse<UploadCompleteResponse>(
+			completeRes,
+			"Failed to start processing",
+		);
+		addMessage(`Processing job #${completeData.jobId} created for ${completeData.filename}.`, "info");
 
 		// 4. Poll for Result
 		await pollForResult(completeData.jobId);
@@ -220,6 +289,7 @@ form.addEventListener("submit", async (e: Event) => {
 	} catch (err) {
 		const message = err instanceof Error ? err.message : "Conversion failed";
 		setStatus(message, "error");
+		addMessage(message, "error");
 		processingIndicator.classList.remove("active");
 	} finally {
 		uploadBtn.disabled = false;
@@ -233,11 +303,15 @@ async function pollForResult(jobId: number): Promise<void> {
 				const res = await fetch(`${STATUS_URL}/${jobId}`);
 				if (!res.ok) {
 					clearInterval(interval);
-					reject(new Error("Status check failed"));
+					const errorPayload = await res.json() as ApiResponse<StatusResponse>;
+					reject(new Error(extractApiErrorMessage(errorPayload, "Status check failed")));
 					return;
 				}
 
-				const data: StatusResponse = await res.json();
+				const data = await readApiResponse<StatusResponse>(
+					res,
+					"Status check failed",
+				);
 
 				if (data.status === "completed" && data.processedUrl) {
 					clearInterval(interval);
@@ -246,6 +320,8 @@ async function pollForResult(jobId: number): Promise<void> {
 				} else if (data.status === "failed") {
 					clearInterval(interval);
 					reject(new Error("Processing failed on server"));
+				} else {
+					setStatus(`Job #${data.jobId} is ${data.status}.`, "processing");
 				}
 			} catch (err) {
 				clearInterval(interval);

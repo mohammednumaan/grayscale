@@ -1,21 +1,58 @@
 import http from "k6/http";
-import { check, fail } from "k6";
+import { check, fail, sleep } from "k6";
 
 
 const TEST_IMAGE = open('./image.jpg', 'b');
 const SIGN_API_ENDPOINT = "http://localhost:3000/grayscale/uploads/sign";
 const UPLOAD_COMPLETE_ENDPOINT = "http://localhost:3000/grayscale/uploads/complete";
+const STATUS_API_ENDPOINT = "http://localhost:3000/grayscale/jobs/status";
+const STATUS_POLL_INTERVAL_SECONDS = 1;
+const STATUS_POLL_TIMEOUT_SECONDS = 30;
 
 
 export const options = {
-
-	vus: 50,
-	duration: "30s",
+	stages: [
+		{ duration: '1m', target: 50 },
+		{ duration: '3m', target: 100 },
+		{ duration: '1m', target: 0 },
+	],
 	thresholds: {
 		"http_req_duration{name:sign_endpoint}": ["p(95)<500"],
-		"http_req_duration{name:complete_endpoint}": ["p(95)<500"]
+		"http_req_duration{name:complete_endpoint}": ["p(95)<500"],
+		"http_req_duration{name:status_endpoint}": ["p(95)<500"]
 	}
 };
+
+function pollJobStatus(jobId) {
+	const startedAt = Date.now();
+
+	while ((Date.now() - startedAt) < STATUS_POLL_TIMEOUT_SECONDS * 1000) {
+		const statusResponse = http.get(`${STATUS_API_ENDPOINT}/${jobId}`, {
+			tags: { name: 'status_endpoint' },
+		});
+		if (statusResponse.error) {
+			fail(`status endpoint transport layer error: ${statusResponse.error}`);
+		}
+
+		const statusOk = check(statusResponse, {
+			'status response is 200': (r) => r.status === 200,
+			'status response includes jobId': (r) => r.json().data.jobId === jobId,
+		});
+
+		if (!statusOk) {
+			fail('request for job status failed');
+		}
+
+		const statusPayload = statusResponse.json();
+		if (statusPayload.data.status === "completed" || statusPayload.data.status === "failed") {
+			return statusPayload.data;
+		}
+
+		sleep(STATUS_POLL_INTERVAL_SECONDS);
+	}
+
+	fail(`job ${jobId} did not reach a terminal state within ${STATUS_POLL_TIMEOUT_SECONDS} seconds`);
+}
 
 
 export default function() {
@@ -34,16 +71,17 @@ export default function() {
 		fail('request for retrieving signature for signed uploads failed');
 	}
 	const signedPayload = signedResponse.json();
+	const signData = signedPayload.data;
 
 	// CLIENT UPLOADS FILE TO CLOUDINARY USING THE SIGNATURE
-	const cloudinaryURL = `https://api.cloudinary.com/v1_1/${signedPayload.cloud_name}/image/upload`;
+	const cloudinaryURL = `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`;
 	const cloudinaryPayload = {
 		file: http.file(TEST_IMAGE, "test_image.jpg", "image/jpeg"),
-		api_key: signedPayload.api_key,
-		timestamp: signedPayload.timestamp,
-		signature: signedPayload.signature,
-		public_id: signedPayload.public_id,
-		folder: signedPayload.folder
+		api_key: signData.api_key,
+		timestamp: signData.timestamp,
+		signature: signData.signature,
+		public_id: signData.public_id,
+		folder: signData.folder
 	};
 
 	const uploadResponse = http.post(cloudinaryURL, cloudinaryPayload, { tags: { name: 'cloudinary_upload' } });
@@ -79,10 +117,17 @@ export default function() {
 	const uploadCompleteOk = check(uploadCompleteResponse, {
 		'upload_complete response is 200': (r) => r.status === 200,
 		'upload_complete success response': (r) => r.json().message === "File metadata saved successfully",
+		'upload_complete returns jobId': (r) => typeof r.json().data.jobId === "number",
 	});
 
 	if (!uploadCompleteOk) {
 		fail('request for upload_complete failed');
 	}
+
+	const uploadCompletePayload = uploadCompleteResponse.json().data;
+	const finalStatus = pollJobStatus(uploadCompletePayload.jobId);
+	check(finalStatus, {
+		'job reaches completed status': (statusPayload) => statusPayload.status === "completed",
+	});
 
 }

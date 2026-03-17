@@ -7,6 +7,7 @@ import cluster from 'cluster'
 import os from 'os';
 import { Redis } from "ioredis";
 import sharp from "sharp";
+import { getRedisConfig } from "./conn/redis.conn.js";
 
 
 const numCPUs = os.cpus().length;
@@ -28,12 +29,10 @@ if (cluster.isPrimary) {
 }
 
 else {
-	const connection = new Redis({
-		host: 'localhost',
-		port: 6379,
-		maxRetriesPerRequest: null
-	})
+	const connection = new Redis(getRedisConfig())
 	const worker = new Worker("grayscale-queue", async (job: Job<FileJobData>) => {
+		await updateFileJobStatus(job.data.jobId, "processing");
+
 		const response = await fetch(job.data.filePath);
 		if (!response.ok) {
 			throw new Error(`Failed to fetch image from ${job.data.filePath}: ${response.statusText}`);
@@ -69,6 +68,9 @@ else {
 	});
 
 	worker.on('failed', async (job, err) => {
+		if (job) {
+			await updateFileJobStatus(job.data.jobId, "failed");
+		}
 		process.send?.({ type: 'failed', jobId: job?.id, error: err.message });
 	});
 
