@@ -8,20 +8,23 @@ const POLL_INTERVAL_MS = 2000;
 const form = document.getElementById("upload-form") as HTMLFormElement;
 const fileInput = document.getElementById("file-input") as HTMLInputElement;
 const dropzone = document.getElementById("dropzone") as HTMLDivElement;
-const selectFileBtn = document.getElementById("select-file-btn") as HTMLButtonElement;
 const fileNameEl = document.getElementById("file-name") as HTMLDivElement;
 const fileSizeEl = document.getElementById("file-size") as HTMLDivElement;
 const changeFileBtn = document.getElementById("change-file-btn") as HTMLButtonElement;
 const uploadBtn = document.getElementById("upload-btn") as HTMLButtonElement;
-const statusEl = document.getElementById("status") as HTMLSpanElement;
-const statusBanner = document.getElementById("status-banner") as HTMLDivElement;
-const messageList = document.getElementById("message-list") as HTMLUListElement;
-const messagePanel = document.getElementById("messages") as HTMLDivElement;
 
+const statusArea = document.getElementById("status-area") as HTMLDivElement;
+const statusTitle = document.getElementById("status-title") as HTMLDivElement;
+const statusText = document.getElementById("status-text") as HTMLDivElement;
+
+
+const displayPlaceholder = document.getElementById("display-placeholder") as HTMLDivElement;
 const comparisonSection = document.getElementById("comparison") as HTMLElement;
 const previewImage = document.getElementById("preview-image") as HTMLImageElement;
 const resultBody = document.getElementById("result-body") as HTMLDivElement;
 const processingIndicator = document.getElementById("processing-indicator") as HTMLDivElement;
+const downloadContainer = document.getElementById("download-container") as HTMLDivElement;
+const downloadLink = document.getElementById("download-link") as HTMLAnchorElement;
 
 interface SignResponse {
 	signature: string;
@@ -70,22 +73,35 @@ interface ApiResponse<T> {
 	error?: ApiErrorResponse;
 }
 
-function setStatus(message: string, type: "success" | "error" | "processing" | "") {
-	statusEl.textContent = message;
-	statusBanner.className = type ? `status-banner ${type}` : "status-banner";
+// Status System
+function updateButtonStates() {
+	const hasFile = fileInput.files && fileInput.files.length > 0;
+	uploadBtn.disabled = !hasFile;
+	// Change button is usually enabled once a file is selected or on idle
+	changeFileBtn.disabled = false;
 }
 
-function clearMessages() {
-	messageList.innerHTML = "";
-	messagePanel.classList.remove("visible");
-}
+function setStatus(title: string, text: string, type: "processing" | "success" | "error" | "idle") {
+	if (type === "idle") {
+		statusTitle.textContent = "Ready";
+		statusTitle.className = "status-value";
+		statusText.textContent = "Awaiting image selection...";
+		statusText.style.display = "block";
+		statusText.style.marginTop = "0.5rem";
+		return;
+	}
 
-function addMessage(message: string, type: "info" | "success" | "error" = "info") {
-	const item = document.createElement("li");
-	item.className = `message-item ${type}`;
-	item.textContent = message;
-	messageList.appendChild(item);
-	messagePanel.classList.add("visible");
+	statusTitle.textContent = title;
+	statusTitle.className = `status-value ${type}`;
+
+	if (text && text.trim().length > 0) {
+		statusText.textContent = text;
+		statusText.style.display = "block";
+		statusText.style.marginTop = "0.5rem";
+	} else {
+		statusText.style.display = "none";
+		statusText.style.marginTop = "0";
+	}
 }
 
 function formatBytes(bytes: number, decimals = 2) {
@@ -99,49 +115,61 @@ function formatBytes(bytes: number, decimals = 2) {
 
 function handleFileSelect(file: File) {
 	if (!file.type.startsWith("image/")) {
-		setStatus("Please select an image file.", "error");
+		// Replace toast with status error
+		setStatus("INVALID FILE", "Please select a valid image file.", "error");
 		return;
 	}
 
-	// Update UI to show selected file
+	// Update UI
 	fileNameEl.textContent = file.name;
 	fileSizeEl.textContent = formatBytes(file.size);
 	dropzone.classList.add("has-file");
 
-	// Show original preview
-	if (previewImage.src) {
-		URL.revokeObjectURL(previewImage.src);
-	}
-	previewImage.src = URL.createObjectURL(file);
+	// Display region
+	displayPlaceholder.style.display = "none";
 	comparisonSection.classList.add("visible");
 
-	// Reset result panel
+	if (previewImage.src) URL.revokeObjectURL(previewImage.src);
+	previewImage.src = URL.createObjectURL(file);
+
+	// Reset
 	resetResultPanel();
-	clearMessages();
-	setStatus("", "");
+	setStatus("", "", "idle");
+	updateButtonStates();
 }
 
 function resetResultPanel() {
-	const existingImg = resultBody.querySelector("img");
-	if (existingImg) existingImg.remove();
+	resultBody.innerHTML = "";
 	processingIndicator.classList.remove("active");
+	downloadContainer.style.display = "none";
 }
 
 function showProcessing() {
 	resetResultPanel();
 	processingIndicator.classList.add("active");
-	setStatus("Processing image...", "processing");
-	addMessage("Upload accepted. Waiting for the worker to finish the grayscale conversion.", "info");
+	comparisonSection.classList.add("visible");
+	displayPlaceholder.style.display = "none";
+	setStatus("PROCESSING", "Initializing...", "processing");
+	uploadBtn.disabled = true;
+	changeFileBtn.disabled = true;
 }
 
 function showResult(url: string) {
 	processingIndicator.classList.remove("active");
+	comparisonSection.classList.add("visible");
 	const img = document.createElement("img");
 	img.src = url;
 	img.alt = "Grayscale result";
 	resultBody.appendChild(img);
-	setStatus("Conversion successful!", "success");
-	addMessage("Processed image is ready.", "success");
+
+	// Setup download link
+	downloadLink.href = url;
+	downloadLink.download = "grayscale-image.png";
+	downloadContainer.style.display = "block";
+
+	setStatus("SUCCESS", "Image processed successfully.", "success");
+	uploadBtn.disabled = false;
+	changeFileBtn.disabled = false;
 }
 
 function extractApiErrorMessage(error: ApiResponse<unknown>, fallback: string) {
@@ -155,8 +183,13 @@ function extractApiErrorMessage(error: ApiResponse<unknown>, fallback: string) {
 async function readApiResponse<T>(response: Response, fallbackMessage: string): Promise<T> {
 	const payload = await response.json() as ApiResponse<T>;
 
-	if (!response.ok || !payload.success || payload.data === undefined) {
+	if (!response.ok || !payload.success) {
 		throw new Error(extractApiErrorMessage(payload, fallbackMessage));
+	}
+
+	if (payload.data === undefined) {
+		// Some endpoints might return success without data
+		return {} as T;
 	}
 
 	return payload.data;
@@ -173,7 +206,6 @@ async function readCloudinaryError(response: Response, fallbackMessage: string) 
 
 // Event Listeners
 
-// Drag & Drop
 dropzone.addEventListener("dragover", (e) => {
 	e.preventDefault();
 	dropzone.classList.add("dragover");
@@ -193,18 +225,9 @@ dropzone.addEventListener("drop", (e) => {
 	}
 });
 
-// Click on dropzone or select button to select file
 dropzone.addEventListener("click", (e) => {
 	const target = e.target as HTMLElement;
-	if (target === changeFileBtn || target === selectFileBtn || target === dropzone || dropzone.contains(target)) {
-		if (target !== changeFileBtn) {
-			fileInput.click();
-		}
-	}
-});
-
-selectFileBtn.addEventListener("click", (e) => {
-	e.stopPropagation();
+	if (target === changeFileBtn || changeFileBtn.contains(target)) return;
 	fileInput.click();
 });
 
@@ -215,37 +238,34 @@ changeFileBtn.addEventListener("click", (e) => {
 
 fileInput.addEventListener("change", () => {
 	const file = fileInput.files?.[0];
-	if (file) {
-		handleFileSelect(file);
-	}
+	if (file) handleFileSelect(file);
 });
 
-// Form Submission
 form.addEventListener("submit", async (e: Event) => {
 	e.preventDefault();
 
 	const files = fileInput.files;
 	if (!files || files.length === 0) {
-		setStatus("Select an image first", "error");
+		setStatus("ERROR", "No file selected.", "error");
+		uploadBtn.disabled = true;
 		return;
 	}
 
 	const file = files[0]!;
 	uploadBtn.disabled = true;
-	clearMessages();
 	showProcessing();
 
 	try {
 		// 1. Get Signature
+		setStatus("PROCESSING", "Securing connection...", "processing");
 		const signRes = await fetch(SIGN_URL);
 		const signData = await readApiResponse<SignResponse>(
 			signRes,
-			"Failed to get upload signature",
+			"SIGNATURE ERROR",
 		);
-		addMessage("Upload signature received.", "info");
-		console.log(signData);
 
 		// 2. Upload to Cloudinary
+		setStatus("PROCESSING", "Uploading to Cloudinary...", "processing");
 		const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`;
 		const formData = new FormData();
 		formData.append("file", file);
@@ -261,12 +281,12 @@ form.addEventListener("submit", async (e: Event) => {
 		});
 
 		if (!uploadRes.ok) {
-			throw new Error(await readCloudinaryError(uploadRes, "Cloudinary upload failed"));
+			throw new Error(await readCloudinaryError(uploadRes, "UPLOAD FAILED"));
 		}
 		const uploadData: CloudinaryUploadResponse = await uploadRes.json();
-		addMessage("Image uploaded to Cloudinary.", "info");
 
 		// 3. Notify Backend
+		setStatus("PROCESSING", "Starting conversion...", "processing");
 		const completeRes = await fetch(UPLOAD_COMPLETE_URL, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -279,22 +299,29 @@ form.addEventListener("submit", async (e: Event) => {
 
 		const completeData = await readApiResponse<UploadCompleteResponse>(
 			completeRes,
-			"Failed to start processing",
+			"HANDSHAKE FAILED",
 		);
-		addMessage(`Processing job #${completeData.jobId} created for ${completeData.filename}.`, "info");
+		setStatus("PROCESSING", "Polling for result...", "processing");
 
 		// 4. Poll for Result
 		await pollForResult(completeData.jobId);
 
 	} catch (err) {
-		const message = err instanceof Error ? err.message : "Conversion failed";
-		setStatus(message, "error");
-		addMessage(message, "error");
+		const message = err instanceof Error ? err.message : "PROCESS FAILED";
+		setStatus("ERROR", message.toUpperCase(), "error");
 		processingIndicator.classList.remove("active");
+		// Keep comparison visible if we have a preview, only show placeholder if no preview
+		if (!previewImage.src) {
+			displayPlaceholder.style.display = "block";
+			comparisonSection.classList.remove("visible");
+		}
 	} finally {
-		uploadBtn.disabled = false;
+		updateButtonStates();
 	}
 });
+
+// Initial State
+updateButtonStates();
 
 async function pollForResult(jobId: number): Promise<void> {
 	return new Promise((resolve, reject) => {
@@ -304,13 +331,13 @@ async function pollForResult(jobId: number): Promise<void> {
 				if (!res.ok) {
 					clearInterval(interval);
 					const errorPayload = await res.json() as ApiResponse<StatusResponse>;
-					reject(new Error(extractApiErrorMessage(errorPayload, "Status check failed")));
+					reject(new Error(extractApiErrorMessage(errorPayload, "POLL ERROR")));
 					return;
 				}
 
 				const data = await readApiResponse<StatusResponse>(
 					res,
-					"Status check failed",
+					"POLL ERROR",
 				);
 
 				if (data.status === "completed" && data.processedUrl) {
@@ -319,9 +346,9 @@ async function pollForResult(jobId: number): Promise<void> {
 					resolve();
 				} else if (data.status === "failed") {
 					clearInterval(interval);
-					reject(new Error("Processing failed on server"));
+					reject(new Error("SYSTEM FAILURE"));
 				} else {
-					setStatus(`Job #${data.jobId} is ${data.status}.`, "processing");
+					setStatus("PROCESSING", `JOB ID ${data.jobId} / ${data.status.toUpperCase()}`, "processing");
 				}
 			} catch (err) {
 				clearInterval(interval);

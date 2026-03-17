@@ -9,626 +9,483 @@
   <title>Grayscale</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet" />
 
   <style>
     /* ──────────────────────────────────────────
        Reset & Base
        ────────────────────────────────────────── */
+    :root {
+      --bg-dark: #000000;
+      --bg-section: #0a0a0a;
+      --border: #222222;
+      --text-main: #ffffff;
+      --text-muted: #666666;
+      --accent: #ffffff;
+      --success: #00ff00;
+      --error: #ff0000;
+    }
+
     *,
     *::before,
     *::after {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      border-radius: 0 !important;
+      /* Force sharp corners */
     }
 
     html {
       font-size: 16px;
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
     }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: #0e0e0e;
-      color: #e0e0e0;
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-main);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      padding: 2rem 1rem;
+      padding: 4rem 2rem;
+      letter-spacing: -0.01em;
     }
 
     /* ──────────────────────────────────────────
-       Card Container
+       Layout
        ────────────────────────────────────────── */
-    .card {
+    .container {
       width: 100%;
-      max-width: 720px;
-      background: #171717;
-      border: 1px solid #2a2a2a;
-      border-radius: 16px;
-      padding: 2.5rem 2.5rem 2rem;
-      animation: cardIn 0.5s ease;
+      max-width: 1000px;
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 2rem;
     }
 
-    @keyframes cardIn {
-      from {
-        opacity: 0;
-        transform: translateY(12px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* ──────────────────────────────────────────
-       Header
-       ────────────────────────────────────────── */
-    .header {
+    header {
+      grid-column: 1 / -1;
       margin-bottom: 2rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 2rem;
     }
 
-    .header h1 {
-      font-size: 1.5rem;
-      font-weight: 600;
-      letter-spacing: -0.03em;
-      color: #f5f5f5;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
+    header h1 {
+      font-size: 3.5rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.04em;
+      line-height: 0.9;
     }
 
-    .header h1 .icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      background: linear-gradient(135deg, #555, #222);
-      font-size: 0.85rem;
-    }
-
-    .header p {
-      margin-top: 0.35rem;
-      font-size: 0.85rem;
-      color: #777;
-      font-weight: 300;
+    header p {
+      margin-top: 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
 
     /* ──────────────────────────────────────────
-       Drop Zone
+       Sidebar / Form
        ────────────────────────────────────────── */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      height: 100%;
+    }
+
     .dropzone {
-      border: 2px dashed #333;
-      border-radius: 12px;
-      padding: 2.5rem 1.5rem;
+      border: 1px solid var(--border);
+      padding: 3rem 1.5rem;
       text-align: center;
       cursor: pointer;
-      transition: border-color 0.25s, background 0.25s;
-      position: relative;
+      background: var(--bg-section);
+      transition: border-color 0.2s;
     }
 
     .dropzone:hover {
-      border-color: #555;
-      background: #1c1c1c;
+      border-color: #444;
     }
 
     .dropzone.dragover {
-      border-color: #888;
-      background: #1f1f1f;
-      border-style: solid;
-    }
-
-    .dropzone.has-file {
-      border-color: #444;
-      border-style: solid;
-      padding: 1.5rem;
-    }
-
-    .dropzone-icon {
-      font-size: 2rem;
-      margin-bottom: 0.75rem;
-      opacity: 0.35;
-      transition: opacity 0.25s;
-    }
-
-    .dropzone:hover .dropzone-icon {
-      opacity: 0.55;
+      border-color: var(--accent);
+      background: #111;
     }
 
     .dropzone-text {
-      font-size: 0.85rem;
-      color: #888;
-      line-height: 1.6;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
     }
 
-    .dropzone-text strong {
-      color: #bbb;
-      font-weight: 500;
-    }
-
-    .dropzone-hint {
-      font-size: 0.75rem;
-      color: #555;
-      margin-top: 0.5rem;
-    }
-
-    .dropzone.has-file .dropzone-icon,
-    .dropzone.has-file .dropzone-text,
-    .dropzone.has-file .dropzone-hint {
-      display: none;
-    }
-
-    /* File info shown inside dropzone after selecting */
     .file-info {
       display: none;
-      align-items: center;
-      gap: 0.75rem;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .dropzone.has-file .dropzone-prompt {
+      display: none;
     }
 
     .dropzone.has-file .file-info {
       display: flex;
     }
 
-    .file-info-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
-      background: #252525;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-      flex-shrink: 0;
+    .mini-preview {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      filter: grayscale(1);
     }
 
-    .file-info-details {
-      flex: 1;
+    .file-details {
       text-align: left;
-      min-width: 0;
     }
 
-    .file-info-name {
-      font-size: 0.85rem;
-      color: #ccc;
-      font-weight: 500;
+    .file-name {
+      font-size: 0.9rem;
+      font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .file-info-size {
+    .file-size {
       font-size: 0.75rem;
-      color: #666;
-      margin-top: 0.1rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
     }
 
-    .file-info-change {
-      font-size: 0.75rem;
-      color: #888;
-      background: none;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 0.3rem 0.7rem;
+    .btn-action {
+      width: 100%;
+      padding: 1rem;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
       cursor: pointer;
-      transition: border-color 0.2s, color 0.2s;
-      flex-shrink: 0;
+      transition: all 0.2s;
     }
 
-    .file-info-change:hover {
-      border-color: #666;
-      color: #bbb;
+    .btn-action:hover:not(:disabled) {
+      background: var(--text-main);
+      color: var(--bg-dark);
+      border-color: var(--text-main);
+    }
+
+    .btn-action:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-action.primary {
+      background: var(--text-main);
+      color: var(--bg-dark);
+      border-color: var(--text-main);
+    }
+
+    .btn-action.primary:hover:not(:disabled) {
+      background: transparent;
+      color: var(--text-main);
+    }
+
+    /* ──────────────────────────────────────────
+       Status Section
+       ────────────────────────────────────────── */
+    .status-area {
+      border: 1px solid var(--border);
+      padding: 2rem 1.5rem;
+      background: var(--bg-section);
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 200px;
+    }
+
+    .status-area.visible {
+      display: block;
+    }
+
+    .status-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .status-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .status-value.processing {
+      color: var(--text-main);
+    }
+
+    .status-value.success {
+      color: var(--success);
+    }
+
+    .status-value.error {
+      color: var(--error);
+    }
+
+    /* ──────────────────────────────────────────
+       Main Content / Display
+       ────────────────────────────────────────── */
+    .display {
+      position: relative;
+      border: 1px solid var(--border);
+      background: var(--bg-section);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 500px;
+      overflow: hidden;
+    }
+
+    .display-placeholder {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+    }
+
+    .comparison {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .comparison.visible {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .preview-box {
+      position: relative;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-box:last-child {
+      border-right: none;
+    }
+
+    .preview-box header {
+      padding: 0 1rem;
+      min-height: 50px;
+      background: #000;
+      border-bottom: 1px solid var(--border);
+      margin: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .preview-box header h2 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+
+    .img-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      overflow: hidden;
+      background: #080808;
+      height: 0;
+      /* Ensures flex container calculates height correctly */
+    }
+
+    .img-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border: 1px solid var(--border);
+    }
+
+    /* Preview footer removed */
+
+    .loader {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.8rem;
+      width: 100%;
+    }
+
+    .loader.active {
+      display: flex;
+    }
+
+    .bar {
+      width: 40px;
+      height: 2px;
+      background: var(--text-muted);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bar::after {
+      content: '';
+      position: absolute;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: var(--text-main);
+      animation: progress 1s infinite linear;
+    }
+
+    @keyframes progress {
+      to {
+        left: 100%;
+      }
+    }
+
+    /* ──────────────────────────────────────────
+       Footer
+       ────────────────────────────────────────── */
+    footer {
+      width: 100%;
+      max-width: 1000px;
+      margin-top: 4rem;
+      border-top: 1px solid var(--border);
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--text-main);
     }
 
     input[type="file"] {
       display: none;
     }
 
-    /* ──────────────────────────────────────────
-       Actions Row
-       ────────────────────────────────────────── */
-    .actions {
-      margin-top: 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .convert-btn {
-      padding: 0.6rem 1.6rem;
-      background: #e0e0e0;
-      color: #111;
-      border: none;
-      border-radius: 8px;
-      font-family: inherit;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.15s;
-    }
-
-    .convert-btn:hover:not(:disabled) {
-      background: #fff;
-      transform: translateY(-1px);
-    }
-
-    .convert-btn:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    .convert-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
-    }
-
-    .feedback {
-      margin-top: 1rem;
-      display: grid;
-      gap: 0.75rem;
-    }
-
-    .status-banner {
-      min-height: 44px;
-      display: flex;
-      align-items: center;
-      padding: 0.8rem 0.9rem;
-      border: 1px solid #272727;
-      border-radius: 10px;
-      background: #121212;
-    }
-
-    #status {
-      font-size: 0.8rem;
-      color: #777;
-      min-height: 1em;
-    }
-
-    .status-banner.success #status {
-      color: #8c8;
-    }
-
-    .status-banner.error #status {
-      color: #c88;
-    }
-
-    .status-banner.processing #status {
-      color: #aaa;
-    }
-
-    .messages {
-      display: none;
-      border: 1px solid #232323;
-      border-radius: 10px;
-      background: #111;
-      padding: 0.9rem;
-    }
-
-    .messages.visible {
-      display: block;
-    }
-
-    .messages-header {
-      font-size: 0.72rem;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: #626262;
-      margin-bottom: 0.7rem;
-    }
-
-    .message-list {
-      list-style: none;
-      display: grid;
-      gap: 0.55rem;
-    }
-
-    .message-item {
-      font-size: 0.82rem;
-      line-height: 1.5;
-      color: #a0a0a0;
-      padding-left: 0.95rem;
-      position: relative;
-    }
-
-    .message-item::before {
-      content: "";
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #555;
-      position: absolute;
-      left: 0;
-      top: 0.45rem;
-    }
-
-    .message-item.success {
-      color: #9fd39f;
-    }
-
-    .message-item.success::before {
-      background: #7ba87b;
-    }
-
-    .message-item.error {
-      color: #df9c9c;
-    }
-
-    .message-item.error::before {
-      background: #bb6e6e;
-    }
-
-    /* ──────────────────────────────────────────
-       Comparison / Preview Section
-       ────────────────────────────────────────── */
-    .comparison {
-      display: none;
-      margin-top: 2rem;
-      gap: 1rem;
-    }
-
-    .comparison.visible {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      animation: fadeUp 0.4s ease;
-    }
-
-    @keyframes fadeUp {
-      from {
-        opacity: 0;
-        transform: translateY(8px);
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .preview-pane {
-      border: 1px solid #2a2a2a;
-      border-radius: 10px;
-      overflow: hidden;
-      background: #131313;
-    }
-
-    .preview-pane-header {
-      padding: 0.6rem 0.9rem;
-      font-size: 0.7rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #666;
-      border-bottom: 1px solid #2a2a2a;
-      background: #171717;
-    }
-
-    .preview-pane-body {
-      padding: 0.75rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 180px;
-      position: relative;
-    }
-
-    .preview-pane-body img {
-      max-width: 100%;
-      max-height: 300px;
-      border-radius: 4px;
-      animation: imgIn 0.35s ease;
-    }
-
-    @keyframes imgIn {
-      from {
-        opacity: 0;
-        transform: scale(0.96);
-      }
-
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    /* Placeholder for the grayscale result */
-    .result-placeholder {
-      text-align: center;
-      color: #444;
-      font-size: 0.8rem;
-      line-height: 1.6;
-    }
-
-    .result-placeholder .dots {
-      display: none;
-    }
-
-    .result-placeholder.processing .dots {
-      display: inline;
-    }
-
-    /* Processing dots animation */
-    @keyframes dotPulse {
-
-      0%,
-      80%,
-      100% {
-        opacity: 0.2;
-      }
-
-      40% {
-        opacity: 1;
-      }
-    }
-
-    .dot {
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #888;
-      margin: 0 2px;
-      animation: dotPulse 1.4s infinite ease-in-out both;
-    }
-
-    .dot:nth-child(1) {
-      animation-delay: 0s;
-    }
-
-    .dot:nth-child(2) {
-      animation-delay: 0.16s;
-    }
-
-    .dot:nth-child(3) {
-      animation-delay: 0.32s;
-    }
-
-    .processing-indicator {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.75rem;
-    }
-
-    .processing-indicator.active {
-      display: flex;
-    }
-
-    .processing-indicator .label {
-      font-size: 0.75rem;
-      color: #666;
-    }
-
-    /* ──────────────────────────────────────────
-       Footer
-       ────────────────────────────────────────── */
-    .footer {
-      margin-top: 2rem;
-      padding-top: 1.25rem;
-      border-top: 1px solid #1e1e1e;
-      font-size: 0.7rem;
-      color: #444;
-      text-align: center;
-      line-height: 1.5;
-    }
-
-    .footer a {
-      color: #666;
-      text-decoration: none;
-      transition: color 0.2s;
-    }
-
-    .footer a:hover {
-      color: #aaa;
-    }
-
-    /* ──────────────────────────────────────────
-       Responsive
-       ────────────────────────────────────────── */
-    @media (max-width: 600px) {
-      .card {
-        padding: 1.5rem;
-        border-radius: 12px;
-      }
-
-      .comparison.visible {
+    @media (max-width: 800px) {
+      .container {
         grid-template-columns: 1fr;
       }
 
-      .dropzone {
-        padding: 2rem 1rem;
+      header h1 {
+        font-size: 2.5rem;
       }
     }
   </style>
 </head>
 
 <body>
-  <main class="card">
-    <!-- Header -->
-    <header class="header">
-      <h1>
-        <span class="icon">◐</span>
-        Grayscale
-      </h1>
-      <p>Drop an image, convert it to grayscale.</p>
+
+  <main class="container">
+    <header>
+      <h1>Grayscale</h1>
+      <p>Image Processing Utility / V1.0</p>
     </header>
 
-    <!-- Upload Form -->
-    <form id="upload-form">
-      <!-- Drop Zone -->
-      <div class="dropzone" id="dropzone">
-        <div class="dropzone-icon">⬡</div>
-        <p class="dropzone-text">
-          Drag &amp; drop an image here
-        </p>
-        <button type="button" class="file-info-change" id="select-file-btn"
-          style="margin-top: 0.75rem; display: inline-block;">Select File</button>
-        <p class="dropzone-hint">Supports JPG, PNG, WebP</p>
-        <input type="file" id="file-input" accept="image/*" />
-
-        <!-- File info (shown after selection) -->
-        <div class="file-info">
-          <div class="file-info-icon">🖼</div>
-          <div class="file-info-details">
-            <div class="file-info-name" id="file-name">—</div>
-            <div class="file-info-size" id="file-size">—</div>
+    <div class="sidebar">
+      <form id="upload-form">
+        <div class="dropzone" id="dropzone">
+          <div class="dropzone-prompt">
+            <span class="dropzone-text">Drop Image / Select File</span>
           </div>
-          <button type="button" class="file-info-change" id="change-file-btn">Change</button>
-        </div>
-      </div>
 
-      <!-- Actions -->
-      <div class="actions">
-        <button type="submit" class="convert-btn" id="upload-btn">Convert</button>
-      </div>
-
-      <div class="feedback">
-        <div class="status-banner" id="status-banner">
-          <span id="status"></span>
-        </div>
-
-        <div class="messages" id="messages">
-          <div class="messages-header">Messages</div>
-          <ul class="message-list" id="message-list"></ul>
-        </div>
-      </div>
-    </form>
-
-    <!-- Comparison Section -->
-    <section class="comparison" id="comparison">
-      <!-- Original Preview -->
-      <div class="preview-pane" id="original-pane">
-        <div class="preview-pane-header">Original</div>
-        <div class="preview-pane-body">
-          <img id="preview-image" alt="Original preview" />
-        </div>
-      </div>
-
-      <!-- Grayscale Result -->
-      <div class="preview-pane" id="result-pane">
-        <div class="preview-pane-header">Grayscale</div>
-        <div class="preview-pane-body" id="result-body">
-          <div class="processing-indicator" id="processing-indicator">
-            <div class="dots">
-              <span class="dot"></span>
-              <span class="dot"></span>
-              <span class="dot"></span>
+          <div class="file-info" id="file-info">
+            <div class="file-details">
+              <div class="file-name" id="file-name">—</div>
+              <div class="file-size" id="file-size">—</div>
             </div>
-            <span class="label">Processing…</span>
+            <button type="button" class="btn-action" id="change-file-btn">Change</button>
+          </div>
+
+          <input type="file" id="file-input" accept="image/*" />
+        </div>
+
+        <div style="margin-top: 1rem;">
+          <button type="submit" class="btn-action primary" id="upload-btn" disabled>Process Image</button>
+        </div>
+      </form>
+
+      <div class="status-area" id="status-area">
+        <span class="status-label">Image Status</span>
+        <div class="status-value" id="status-title" style="margin-top: 0.5rem;">Ready</div>
+        <p id="status-text"
+          style="font-size: 0.7rem; color: var(--text-muted); line-height: 1.4; display: block; margin-top: 0.3rem;">
+          Awaiting image selection...
+        </p>
+      </div>
+    </div>
+
+    <div class="display" id="display-region">
+      <div id="display-placeholder" class="display-placeholder">No Image Loaded</div>
+
+
+      <section class="comparison" id="comparison">
+        <div class="preview-box">
+          <header>
+            <h2>Original</h2>
+          </header>
+          <div class="img-container">
+            <img id="preview-image" alt="Original preview" />
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- Footer -->
-    <footer class="footer">
-      Built with Express, BullMQ &amp; Jimp — <a href="https://github.com/mohammednumaan/grayscale" target="_blank"
-        rel="noopener">View on GitHub</a>
-    </footer>
+        <div class="preview-box">
+          <header style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Processed</h2>
+            <div id="download-container" style="display: none;">
+              <a id="download-link" href="#" target="_blank" class="btn-action"
+                style="display: inline-block; padding: 0.3rem 0.6rem; font-size: 0.6rem; width: auto; text-transform: none; letter-spacing: 0;">Download
+                Result</a>
+            </div>
+          </header>
+          <div class="img-container" style="position: relative;">
+            <div class="loader" id="processing-indicator"
+              style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10;">
+              <div class="bar"></div>
+              <span class="display-placeholder" style="font-size: 0.61rem;">Converting</span>
+            </div>
+            <div id="result-body"
+              style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+              <!-- Result image will go here -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
   </main>
 
   <script src="dist/client.js"></script>
