@@ -1,4 +1,4 @@
-interface FileMetadata {
+interface FileMetadataType {
 	id: number;
 	filename: string;
 	size: number;
@@ -7,7 +7,7 @@ interface FileMetadata {
 	file_path: string;
 }
 
-interface FileJobs {
+interface FileJobsType {
 	id: number;
 	file_id: number;
 	status: "pending" | "processing" | "completed" | "failed";
@@ -15,9 +15,9 @@ interface FileJobs {
 	updated_at: Date;
 }
 
-interface FileJobData {
+interface FileJobDataType {
 	jobId: number;
 	filePath: string;
 }
 
-export { type FileMetadata, type FileJobs, type FileJobData };
+export { type FileMetadataType, type FileJobsType, type FileJobDataType };

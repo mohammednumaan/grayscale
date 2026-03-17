@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { insertFileJob, insertFileMetadata } from "../db/query.db.js";
-import type { FileJobs, FileMetadata } from "../types/types.js";
+import type { FileJobsType, FileMetadataType } from "../types/types.js";
 import grayscaleQueue from "../conn/queue.conn.js";
 import cloudinary from "../conn/cloudinary.conn.js";
 import { v4 as uuidv4 } from "uuid";
@@ -11,6 +11,9 @@ import {
 	createApiSuccessResponse,
 	sendApiResponse,
 } from "../utils/response.utils.js";
+import { z } from "zod";
+import validate from "../zod/validate.js";
+import { UploadCompleteBodySchema } from "../zod/upload.z.js";
 
 const router = Router();
 
@@ -56,29 +59,24 @@ router.get("/sign", asyncErrorHandler(async (_req, res) => {
 
 
 router.post("/complete", asyncErrorHandler(async (req, res) => {
-	const { filename, size, file_path } = req.body;
+	const validationResult = validate(UploadCompleteBodySchema, req.body);
 
-	if (!filename || !size || !file_path) {
+	if (!validationResult.success) {
 		throw new ValidationError(
-			"Missing required fields: filename, size, file_path",
+			"Invalid request body",
+			"VALIDATION_ERROR",
+			z.flattenError(validationResult.error),
 		);
 	}
 
-	if (typeof filename !== "string" || typeof file_path !== "string") {
-		throw new ValidationError("filename and file_path must be strings");
-	}
+	const { filename, size, file_path } = validationResult.data;
 
-	if (typeof size !== "number" || Number.isNaN(size) || size <= 0) {
-		throw new ValidationError("size must be a positive number");
-	}
-
-	// Persist metadata before enqueueing so status lookups work for accepted jobs.
-	const fileMetadata: FileMetadata = await insertFileMetadata({
+	const fileMetadata: FileMetadataType = await insertFileMetadata({
 		filename,
 		size,
 		file_path,
 	});
-	const fileJob: FileJobs = await insertFileJob({
+	const fileJob: FileJobsType = await insertFileJob({
 		file_id: fileMetadata.id,
 		status: "pending",
 	});

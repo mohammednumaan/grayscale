@@ -15,6 +15,10 @@ const env = {
 		port: Number(process.env.REDIS_PORT ?? 6379),
 		password: process.env.REDIS_PASSWORD || undefined,
 	},
+	allowedOrigins: (process.env.ALLOWED_ORIGINS ?? "http://localhost:3000")
+		.split(",")
+		.map((o) => o.trim())
+		.filter(Boolean),
 };
 
 export default env;

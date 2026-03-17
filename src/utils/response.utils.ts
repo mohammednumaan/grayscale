@@ -1,6 +1,6 @@
 import { type Response } from "express";
 
-interface ApiResponse<T = unknown> {
+interface ApiResponseType<T = unknown> {
 	message: string;
 	statusCode: number;
 	success: boolean;
@@ -15,7 +15,7 @@ export function createApiSuccessResponse<T>(
 	message: string,
 	statusCode: number,
 	data?: T,
-): ApiResponse<T> {
+): ApiResponseType<T> {
 	return {
 		message,
 		statusCode,
@@ -29,7 +29,7 @@ export function createApiErrorResponse(
 	statusCode: number,
 	apiErrorCode: string,
 	description?: unknown,
-): ApiResponse {
+): ApiResponseType {
 	return {
 		message,
 		statusCode,
@@ -41,6 +41,6 @@ export function createApiErrorResponse(
 	};
 }
 
-export function sendApiResponse<T>(res: Response, response: ApiResponse<T>) {
+export function sendApiResponse<T>(res: Response, response: ApiResponseType<T>) {
 	return res.status(response.statusCode).json(response);
 }

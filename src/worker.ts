@@ -1,5 +1,5 @@
 import { Job, Worker } from "bullmq";
-import { type FileJobData } from "./types/types.js";
+import { type FileJobDataType } from "./types/types.js";
 import cloudinary from "./conn/cloudinary.conn.js";
 import { updateFileMetadata, updateFileJobStatus } from "./db/query.db.js";
 import type { UploadApiResponse } from "cloudinary";
@@ -30,7 +30,7 @@ if (cluster.isPrimary) {
 
 else {
 	const connection = new Redis(getRedisConfig())
-	const worker = new Worker("grayscale-queue", async (job: Job<FileJobData>) => {
+const worker = new Worker("grayscale-queue", async (job: Job<FileJobDataType>) => {
 		await updateFileJobStatus(job.data.jobId, "processing");
 
 		const response = await fetch(job.data.filePath);

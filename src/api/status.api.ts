@@ -7,15 +7,24 @@ import {
 	createApiSuccessResponse,
 	sendApiResponse,
 } from "../utils/response.utils.js";
+import { z } from "zod";
+import validate from "../zod/validate.js";
+import { JobStatusParamsSchema } from "../zod/status.z.js";
 
 const router = Router();
 
 router.get("/:jobId", asyncErrorHandler(async (req, res) => {
-	const jobId = Number(req.params.jobId);
+	const validationResult = validate(JobStatusParamsSchema, req.params);
 
-	if (Number.isNaN(jobId)) {
-		throw new ValidationError("Invalid job ID");
+	if (!validationResult.success) {
+		throw new ValidationError(
+			"Invalid request params",
+			"VALIDATION_ERROR",
+			z.flattenError(validationResult.error),
+		);
 	}
+
+	const { jobId } = validationResult.data;
 	const job = await getFileJobById(jobId);
 
 	if (!job) {

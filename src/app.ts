@@ -12,7 +12,7 @@ import env from "./env.js";
 const app = express();
 const PORT = env.port;
 
-app.use(cors());
+app.use(cors({ origin: env.allowedOrigins }));
 app.use(express.json());
 
 const serverAdapter = new ExpressAdapter();
