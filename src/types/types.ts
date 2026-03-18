@@ -17,7 +17,7 @@ interface FileJobsType {
 
 interface FileJobDataType {
   jobId: number;
-  fileKey: string;
+  filePath: string;
 }
 
 export { type FileMetadataType, type FileJobsType, type FileJobDataType };

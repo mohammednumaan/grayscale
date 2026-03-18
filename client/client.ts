@@ -3,7 +3,6 @@ const UPLOAD_COMPLETE_URL = "http://localhost:3000/grayscale/uploads/complete";
 const STATUS_URL = "http://localhost:3000/grayscale/jobs/status";
 
 const POLL_INTERVAL_MS = 2000;
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 // DOM Elements
 const form = document.getElementById("upload-form") as HTMLFormElement;
@@ -39,9 +38,25 @@ const downloadLink = document.getElementById(
 ) as HTMLAnchorElement;
 
 interface SignResponse {
-  uploadUrl: string;
-  fileKey: string;
-  bucket: string;
+  signature: string;
+  public_id: string;
+  folder: string;
+  timestamp: number;
+  cloud_name: string;
+  api_key: string;
+}
+
+interface CloudinaryUploadResponse {
+  secure_url: string;
+  public_id: string;
+  bytes: number;
+  original_filename: string;
+}
+
+interface CloudinaryErrorPayload {
+  error?: {
+    message?: string;
+  };
 }
 
 interface UploadCompleteResponse {
@@ -54,10 +69,6 @@ interface StatusResponse {
   status: "pending" | "processing" | "completed" | "failed";
   processedUrl: string | null;
   filename: string | null;
-}
-
-interface DownloadResponse {
-  downloadUrl: string;
 }
 
 interface ApiErrorResponse {
@@ -119,16 +130,8 @@ function formatBytes(bytes: number, decimals = 2) {
 
 function handleFileSelect(file: File) {
   if (!file.type.startsWith("image/")) {
+    // Replace toast with status error
     setStatus("INVALID FILE", "Please select a valid image file.", "error");
-    return;
-  }
-
-  if (file.size > MAX_FILE_SIZE) {
-    setStatus(
-      "INVALID FILE",
-      "File exceeds 10 MB limit. Please choose a smaller image.",
-      "error",
-    );
     return;
   }
 
@@ -159,7 +162,6 @@ function resetResultPanel() {
 function showProcessing() {
   resetResultPanel();
   processingIndicator.classList.add("active");
-
   comparisonSection.classList.add("visible");
   displayPlaceholder.style.display = "none";
   setStatus("PROCESSING", "Initializing...", "processing");
@@ -214,6 +216,18 @@ async function readApiResponse<T>(
   return payload.data;
 }
 
+async function readCloudinaryError(
+  response: Response,
+  fallbackMessage: string,
+) {
+  try {
+    const payload = (await response.json()) as CloudinaryErrorPayload;
+    return payload.error?.message || fallbackMessage;
+  } catch {
+    return fallbackMessage;
+  }
+}
+
 // Event Listeners
 
 dropzone.addEventListener("dragover", (e) => {
@@ -266,7 +280,7 @@ form.addEventListener("submit", async (e: Event) => {
   showProcessing();
 
   try {
-    // 1. Get Presigned Upload URL
+    // 1. Get Signature
     setStatus("PROCESSING", "Securing connection...", "processing");
     const signRes = await fetch(SIGN_URL);
     const signData = await readApiResponse<SignResponse>(
@@ -274,21 +288,26 @@ form.addEventListener("submit", async (e: Event) => {
       "SIGNATURE ERROR",
     );
 
-    // 2. Upload to S3 using presigned URL
-    setStatus("PROCESSING", "Uploading to S3...", "processing");
-    const uploadRes = await fetch(signData.uploadUrl, {
-      method: "PUT",
-      mode: "cors",
-      headers: {
-        "Content-Type": file.type,
-      },
-      body: file,
+    // 2. Upload to Cloudinary
+    setStatus("PROCESSING", "Uploading to Cloudinary...", "processing");
+    const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("api_key", signData.api_key);
+    formData.append("timestamp", String(signData.timestamp));
+    formData.append("signature", signData.signature);
+    formData.append("public_id", signData.public_id);
+    formData.append("folder", signData.folder);
+
+    const uploadRes = await fetch(cloudinaryUrl, {
+      method: "POST",
+      body: formData,
     });
 
     if (!uploadRes.ok) {
-      const errorText = await uploadRes.text();
-      throw new Error(`S3 upload failed: ${uploadRes.status} - ${errorText}`);
+      throw new Error(await readCloudinaryError(uploadRes, "UPLOAD FAILED"));
     }
+    const uploadData: CloudinaryUploadResponse = await uploadRes.json();
 
     // 3. Notify Backend
     setStatus("PROCESSING", "Starting conversion...", "processing");
@@ -297,8 +316,8 @@ form.addEventListener("submit", async (e: Event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         filename: file.name,
-        size: Number(file.size),
-        file_path: signData.fileKey,
+        size: uploadData.bytes,
+        file_path: uploadData.secure_url,
       }),
     });
 
@@ -342,17 +361,9 @@ async function pollForResult(jobId: number): Promise<void> {
 
         const data = await readApiResponse<StatusResponse>(res, "POLL ERROR");
 
-        if (data.status === "completed") {
+        if (data.status === "completed" && data.processedUrl) {
           clearInterval(interval);
-
-          // Fetch presigned download URL
-          const downloadRes = await fetch(`${STATUS_URL}/${jobId}/download`);
-          const downloadData = await readApiResponse<DownloadResponse>(
-            downloadRes,
-            "DOWNLOAD URL ERROR",
-          );
-
-          showResult(downloadData.downloadUrl);
+          showResult(data.processedUrl);
           resolve();
         } else if (data.status === "failed") {
           clearInterval(interval);

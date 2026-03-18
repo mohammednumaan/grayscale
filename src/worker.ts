@@ -1,13 +1,12 @@
 import { Job, Worker } from "bullmq";
 import { type FileJobDataType } from "./types/types.js";
-import { getPresignedDownloadUrl, s3Client } from "./conn/s3.conn.js";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import cloudinary from "./conn/cloudinary.conn.js";
 import { updateFileMetadata, updateFileJobStatus } from "./db/query.db.js";
+import type { UploadApiResponse } from "cloudinary";
 import cluster from "cluster";
 import os from "os";
 import sharp from "sharp";
 import { getRedisConfig } from "./conn/redis.conn.js";
-import env from "./env.js";
 
 const numCPUs = os.cpus().length;
 const WORKERS_PER_CPU = 1;
@@ -36,42 +35,41 @@ if (cluster.isPrimary) {
 		async (job: Job<FileJobDataType>) => {
 			await updateFileJobStatus(job.data.jobId, "processing");
 
-			const fileKey = job.data.fileKey;
-
-			const downloadUrl = await getPresignedDownloadUrl(fileKey);
-
-			const response = await fetch(downloadUrl);
+			const response = await fetch(job.data.filePath);
 			if (!response.ok) {
 				throw new Error(
-					`Failed to fetch image from S3: ${response.statusText}`,
+					`Failed to fetch image from ${job.data.filePath}: ${response.statusText}`,
 				);
 			}
-			const responseBuffer = Buffer.from(await response.arrayBuffer());
 
-			const processedBuffer = await sharp(responseBuffer)
+			const responseBuffer = Buffer.from(await response.arrayBuffer());
+			const finalImageBuffer = await sharp(responseBuffer)
 				.grayscale()
 				.jpeg()
 				.toBuffer();
+			const uploadResult = await new Promise<UploadApiResponse>(
+				(resolve, reject) => {
+					const uploadStream = cloudinary.uploader.upload_stream(
+						{ folder: "grayscale-uploads" },
+						(error, result) => {
+							if (error) {
+								reject(error);
+							} else if (result) {
+								resolve(result);
+							} else {
+								reject(new Error("Cloudinary upload returned no result"));
+							}
+						},
+					);
 
-			const outputKey = fileKey.replace("uploads/", "processed/");
-
-			await s3Client.send(
-				new PutObjectCommand({
-					Bucket: env.s3.bucket,
-					Key: outputKey,
-					Body: processedBuffer,
-					ContentType: "image/jpeg",
-				}),
+					uploadStream.end(finalImageBuffer);
+				},
 			);
 
-			await updateFileMetadata(outputKey, job.data.jobId);
-			return { outputKey };
+			await updateFileMetadata(uploadResult.secure_url, job.data.jobId);
+			return uploadResult;
 		},
-		{
-			connection: connection,
-			concurrency: 5,
-			removeOnComplete: { count: 100 },
-		},
+		{ connection, concurrency: 5, removeOnComplete: { count: 100 } },
 	);
 
 	worker.on("completed", async (job, result) => {
