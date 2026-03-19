@@ -1,50 +1,17 @@
 import pool from "../conn/pg.conn.js";
-import type { FileMetadataType, FileJobsType } from "../types/types.js";
-
-async function insertFileMetadata(
-  data: Omit<FileMetadataType, "id" | "uploaded_at" | "updated_at">,
-): Promise<FileMetadataType> {
-  const { rows } = await pool.query(
-    `INSERT INTO file_metadata (filename, size, file_path)
-		 VALUES ($1, $2, $3)
-		 RETURNING *`,
-    [data.filename, data.size, data.file_path],
-  );
-  return rows[0] as FileMetadataType;
-}
-
-async function getFileMetadataById(
-  id: number,
-): Promise<FileMetadataType | null> {
-  const { rows } = await pool.query(
-    `SELECT * FROM file_metadata WHERE id = $1`,
-    [id],
-  );
-  return (rows[0] as FileMetadataType) ?? null;
-}
-
-async function updateFileMetadata(
-  fileKey: string,
-  id: number,
-): Promise<FileMetadataType> {
-  const { rows } = await pool.query(
-    `UPDATE file_metadata SET file_path = $1, updated_at = NOW()
-		 WHERE id = (SELECT file_id FROM file_jobs WHERE id = $2)
-		 RETURNING *`,
-    [fileKey, id],
-  );
-
-  return rows[0] as FileMetadataType;
-}
+import type { FileJobsType } from "../types/types.js";
 
 async function insertFileJob(
-  data: Omit<FileJobsType, "id" | "created_at" | "updated_at">,
+  data: Omit<
+    FileJobsType,
+    "id" | "created_at" | "updated_at" | "processed_file_path"
+  >,
 ): Promise<FileJobsType> {
   const { rows } = await pool.query(
-    `INSERT INTO file_jobs (file_id, status)
-		 VALUES ($1, $2)
+    `INSERT INTO file_jobs (public_id, filename, original_file_path, status)
+		 VALUES ($1, $2, $3, $4)
 		 RETURNING *`,
-    [data.file_id, data.status],
+    [data.public_id, data.filename, data.original_file_path, data.status],
   );
   return rows[0] as FileJobsType;
 }
@@ -69,11 +36,22 @@ async function updateFileJobStatus(
   return (rows[0] as FileJobsType) ?? null;
 }
 
+async function updateProcessedFilePath(
+  processed_file_path: string,
+  id: number,
+): Promise<FileJobsType> {
+  const { rows } = await pool.query(
+    `UPDATE file_jobs SET processed_file_path = $1, updated_at = NOW()
+		 WHERE id = $2
+		 RETURNING *`,
+    [processed_file_path, id],
+  );
+  return rows[0] as FileJobsType;
+}
+
 export {
-  insertFileMetadata,
-  getFileMetadataById,
-  updateFileMetadata,
   insertFileJob,
   getFileJobById,
   updateFileJobStatus,
+  updateProcessedFilePath,
 };

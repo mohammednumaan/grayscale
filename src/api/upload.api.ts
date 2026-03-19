@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { insertFileJob, insertFileMetadata } from "../db/query.db.js";
-import type { FileJobsType, FileMetadataType } from "../types/types.js";
+import { insertFileJob } from "../db/query.db.js";
+import type { FileJobsType } from "../types/types.js";
 import grayscaleQueue from "../conn/queue.conn.js";
 import cloudinary from "../conn/cloudinary.conn.js";
 import { v4 as uuidv4 } from "uuid";
@@ -13,7 +13,7 @@ import {
 } from "../utils/response.utils.js";
 import { z } from "zod";
 import validate from "../zod/validate.js";
-import { UploadCompleteBodySchema } from "../zod/upload.z.js";
+import { CloudinaryUploadResponseSchema } from "../zod/cloudinary.z.js";
 
 const router = Router();
 
@@ -22,7 +22,6 @@ router.get(
 	asyncErrorHandler(async (_req, res) => {
 		const timeStamp = Math.round(new Date().getTime() / 1000);
 		const folder = "uploads";
-		const public_id = `${folder}/${uuidv4()}`;
 		const apiSecret = env.cloudinary.apiSecret;
 		const cloudName = env.cloudinary.cloudName;
 		const apiKey = env.cloudinary.apiKey;
@@ -35,6 +34,7 @@ router.get(
 			);
 		}
 
+		const public_id = `${folder}/${uuidv4()}`;
 		const paramsToSign = {
 			timestamp: timeStamp,
 			public_id,
@@ -61,9 +61,9 @@ router.get(
 );
 
 router.post(
-	"/complete",
+	"/notify",
 	asyncErrorHandler(async (req, res) => {
-		const validationResult = validate(UploadCompleteBodySchema, req.body);
+		const validationResult = validate(CloudinaryUploadResponseSchema, req.body);
 
 		if (!validationResult.success) {
 			throw new ValidationError(
@@ -73,15 +73,12 @@ router.post(
 			);
 		}
 
-		const { filename, size, file_path } = validationResult.data;
+		const { original_filename, public_id, secure_url } = validationResult.data;
 
-		const fileMetadata: FileMetadataType = await insertFileMetadata({
-			filename,
-			size,
-			file_path,
-		});
 		const fileJob: FileJobsType = await insertFileJob({
-			file_id: fileMetadata.id,
+			public_id,
+			filename: original_filename,
+			original_file_path: secure_url,
 			status: "pending",
 		});
 
@@ -89,7 +86,7 @@ router.post(
 			"grayscale-job",
 			{
 				jobId: fileJob.id,
-				filePath: fileMetadata.file_path,
+				originalFilePath: fileJob.original_file_path,
 			},
 			{
 				attempts: 3,
@@ -105,7 +102,7 @@ router.post(
 		return sendApiResponse(
 			res,
 			createApiSuccessResponse("File metadata saved successfully", 200, {
-				filename,
+				filename: original_filename,
 				jobId: fileJob.id,
 			}),
 		);

@@ -1,15 +1,9 @@
-interface FileMetadataType {
-  id: number;
-  filename: string;
-  size: number;
-  uploaded_at: Date;
-  updated_at: Date;
-  file_path: string;
-}
-
 interface FileJobsType {
   id: number;
-  file_id: number;
+  public_id: string;
+  filename: string;
+  original_file_path: string;
+  processed_file_path: string | null;
   status: "pending" | "processing" | "completed" | "failed";
   created_at: Date;
   updated_at: Date;
@@ -17,7 +11,7 @@ interface FileJobsType {
 
 interface FileJobDataType {
   jobId: number;
-  filePath: string;
+  originalFilePath: string;
 }
 
-export { type FileMetadataType, type FileJobsType, type FileJobDataType };
+export { type FileJobsType, type FileJobDataType };

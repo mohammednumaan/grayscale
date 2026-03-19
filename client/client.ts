@@ -1,5 +1,5 @@
 const SIGN_URL = "http://localhost:3000/grayscale/uploads/sign";
-const UPLOAD_COMPLETE_URL = "http://localhost:3000/grayscale/uploads/complete";
+const UPLOAD_NOTIFY_URL = "http://localhost:3000/grayscale/uploads/notify";
 const STATUS_URL = "http://localhost:3000/grayscale/jobs/status";
 
 const POLL_INTERVAL_MS = 2000;
@@ -66,9 +66,11 @@ interface UploadCompleteResponse {
 
 interface StatusResponse {
   jobId: number;
+  publicId: string;
   status: "pending" | "processing" | "completed" | "failed";
   processedUrl: string | null;
-  filename: string | null;
+  originalUrl: string;
+  filename: string;
 }
 
 interface ApiErrorResponse {
@@ -311,24 +313,20 @@ form.addEventListener("submit", async (e: Event) => {
 
     // 3. Notify Backend
     setStatus("PROCESSING", "Starting conversion...", "processing");
-    const completeRes = await fetch(UPLOAD_COMPLETE_URL, {
+    const notifyRes = await fetch(UPLOAD_NOTIFY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        filename: file.name,
-        size: uploadData.bytes,
-        file_path: uploadData.secure_url,
-      }),
+      body: JSON.stringify(uploadData),
     });
 
-    const completeData = await readApiResponse<UploadCompleteResponse>(
-      completeRes,
+    const notifyData = await readApiResponse<UploadCompleteResponse>(
+      notifyRes,
       "HANDSHAKE FAILED",
     );
     setStatus("PROCESSING", "Polling for result...", "processing");
 
     // 4. Poll for Result
-    await pollForResult(completeData.jobId);
+    await pollForResult(notifyData.jobId);
   } catch (err) {
     const message = err instanceof Error ? err.message : "PROCESS FAILED";
     setStatus("ERROR", message.toUpperCase(), "error");

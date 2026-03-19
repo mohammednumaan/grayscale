@@ -8,7 +8,8 @@ const UploadCompleteBodySchema = z.object({
   size: z
     .number()
     .positive("size must be a positive number")
-    .max(MAX_FILE_SIZE, "File size exceeds the maximum allowed size of 10 MB"),
+    .max(MAX_FILE_SIZE, "File size exceeds the maximum allowed size of 10 MB")
+    .optional(),
   file_path: z.string().min(1, "file_path is required"),
 });
 
