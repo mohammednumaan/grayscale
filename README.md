@@ -34,7 +34,7 @@ and the worker is responsible for processing the images, so how does the user ge
 processed image back in this architecture?
 ```
 
-well, there are 2 primary ways to handle this:
+well, there are 3 primary ways to handle this:
 1. **polling**: the user can periodically check the status of their request by sending a request to the server. the server can check if the image has been processed and return the result. this approach is simple to implement but can lead to unnecessary requests and increased load on the server.
 
 2. **sse (server-sent events)**: the server can use server-sent events to push updates to the client when the image processing is complete. this way, the user doesn't have to continuously poll the server, and they will receive the result as soon as it's ready. this approach is more efficient as it completely eliminates the need for polling and reduces the load on the server.
