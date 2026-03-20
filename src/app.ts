@@ -6,8 +6,8 @@ import statusRouter from "./api/status.api.js";
 import { ExpressAdapter } from "@bull-board/express";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import grayscaleQueue from "./conn/queue.conn.js";
 import env from "./env.js";
+import { grayscaleQueue } from "./conn.js";
 
 const app = express();
 const PORT = env.port;

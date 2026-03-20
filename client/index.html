@@ -341,24 +341,6 @@
       display: flex;
     }
 
-    .bar {
-      width: 40px;
-      height: 2px;
-      background: var(--text-muted);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .bar::after {
-      content: '';
-      position: absolute;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: var(--text-main);
-      animation: progress 1s infinite linear;
-    }
-
     @keyframes progress {
       to {
         left: 100%;
@@ -366,19 +348,90 @@
     }
 
     /* ──────────────────────────────────────────
-       AI Animations (Apple/Samsung Style)
+       Cinematic AI Animations
        ────────────────────────────────────────── */
-    .glow-wrapper {
-      position: relative;
+    /* ──────────────────────────────────────────
+       Modern Skeleton Reveal UI
+       ────────────────────────────────────────── */
+    .skeleton-loader {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      z-index: 1;
+      background: linear-gradient(90deg, #0a0a0a 25%, #1a1a1a 50%, #0a0a0a 75%);
+      background-size: 200% 100%;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      will-change: transform, opacity;
+      transition: opacity 0.3s ease-out, transform 0.3s ease-out;
     }
 
-    @keyframes progress {
-      to {
-        left: 100%;
+    @media (prefers-reduced-motion: no-preference) {
+      .skeleton-loader {
+        animation: shimmer 2s infinite linear, breathing 3s ease-in-out infinite;
       }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    @keyframes breathing {
+
+      0%,
+      100% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.015);
+      }
+    }
+
+    .reveal-image {
+      opacity: 0;
+      transform: scale(1.04);
+      transition:
+        opacity 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+        box-shadow 0.4s ease;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      will-change: transform, opacity;
+      position: relative;
+      z-index: 10;
+    }
+
+    .reveal-image.visible {
+      opacity: 1;
+      transform: scale(1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    }
+
+    .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      opacity: 0;
+      padding: 2rem;
+      text-align: center;
+      transition: opacity 0.4s ease;
+      z-index: 30;
+    }
+
+    .error-container.visible {
+      opacity: 1;
     }
 
     /* ──────────────────────────────────────────
@@ -494,8 +547,8 @@
               <span class="display-placeholder" style="font-size: 0.61rem;">Converting</span>
             </div>
             <div id="result-body"
-              style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
-              <!-- Result image will go here -->
+              style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative;">
+              <!-- Skeleton or Image will be injected here -->
             </div>
           </div>
         </div>

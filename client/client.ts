@@ -33,9 +33,7 @@ const processingIndicator = document.getElementById(
 const downloadContainer = document.getElementById(
   "download-container",
 ) as HTMLDivElement;
-const downloadLink = document.getElementById(
-  "download-link",
-) as HTMLAnchorElement;
+const downloadLink = document.getElementById("download-link") as HTMLAnchorElement;
 
 interface SignResponse {
   signature: string;
@@ -132,24 +130,19 @@ function formatBytes(bytes: number, decimals = 2) {
 
 function handleFileSelect(file: File) {
   if (!file.type.startsWith("image/")) {
-    // Replace toast with status error
     setStatus("INVALID FILE", "Please select a valid image file.", "error");
     return;
   }
 
-  // Update UI
   fileNameEl.textContent = file.name;
   fileSizeEl.textContent = formatBytes(file.size);
   dropzone.classList.add("has-file");
-
-  // Display region
   displayPlaceholder.style.display = "none";
   comparisonSection.classList.add("visible");
 
   if (previewImage.src) URL.revokeObjectURL(previewImage.src);
   previewImage.src = URL.createObjectURL(file);
 
-  // Reset
   resetResultPanel();
   setStatus("", "", "idle");
   updateButtonStates();
@@ -163,30 +156,84 @@ function resetResultPanel() {
 
 function showProcessing() {
   resetResultPanel();
+
+  // Inject Modern Skeleton
+  const skeleton = document.createElement("div");
+  skeleton.className = "skeleton-loader";
+  skeleton.id = "active-skeleton";
+
+  // SVG Icon inside skeleton
+  skeleton.innerHTML = `
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="18" stroke="#333" stroke-width="2" />
+      <circle cx="20" cy="20" r="18" stroke="white" stroke-width="2" stroke-dasharray="100" stroke-dashoffset="70" style="animation: spin 1.5s linear infinite" />
+    </svg>
+    <style>
+      @keyframes spin { from { stroke-dashoffset: 100; } to { stroke-dashoffset: -100; } }
+    </style>
+  `;
+
+  resultBody.appendChild(skeleton);
+
   processingIndicator.classList.add("active");
   comparisonSection.classList.add("visible");
   displayPlaceholder.style.display = "none";
-  setStatus("PROCESSING", "Initializing...", "processing");
+  setStatus("PROCESSING", "Analyzing image assets...", "processing");
   uploadBtn.disabled = true;
-  changeFileBtn.disabled = true;
 }
 
 function showResult(url: string) {
-  processingIndicator.classList.remove("active");
-  comparisonSection.classList.add("visible");
-  const img = document.createElement("img");
+  console.log("[Reveal] Beginning sophisticated image reveal flow");
+
+  // 1. Prefetch Image
+  const img = new Image();
   img.src = url;
-  img.alt = "Grayscale result";
-  resultBody.appendChild(img);
+  img.onload = () => {
+    const resultImg = document.createElement("img");
+    resultImg.src = url;
+    resultImg.className = "reveal-image";
+    resultImg.alt = "Processed image";
 
-  // Setup download link
-  downloadLink.href = url;
-  downloadLink.download = "grayscale-image.png";
-  downloadContainer.style.display = "block";
+    const skeleton = document.getElementById("active-skeleton");
 
-  setStatus("SUCCESS", "Image processed successfully.", "success");
-  uploadBtn.disabled = false;
-  changeFileBtn.disabled = false;
+    // 2. Stack and Reveal
+    resultBody.appendChild(resultImg);
+
+    // Trigger animations in next frame
+    requestAnimationFrame(() => {
+      resultImg.classList.add("visible");
+      if (skeleton) {
+        skeleton.style.opacity = "0";
+        skeleton.style.transform = "scale(0.98)";
+
+        // 3. Cleanup after transition
+        skeleton.addEventListener("transitionend", () => {
+          skeleton.remove();
+          console.log("[Reveal] Skeleton removed from DOM");
+        }, { once: true });
+      }
+    });
+
+    setStatus("COMPLETED", "Visual refinement complete.", "success");
+    processingIndicator.classList.remove("active");
+    downloadLink.href = url;
+    downloadLink.download = "grayscale-result.png";
+    downloadContainer.style.display = "block";
+    uploadBtn.disabled = false;
+    changeFileBtn.disabled = false;
+  };
+}
+
+function showError(message: string) {
+  resetResultPanel();
+  const errorCont = document.createElement("div");
+  errorCont.className = "error-container visible";
+  errorCont.innerHTML = `
+    <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚠️</div>
+    <div style="font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">${message}</div>
+    <button class="btn-action primary" onclick="location.reload()" style="width: auto;">Try Again</button>
+  `;
+  resultBody.appendChild(errorCont);
 }
 
 function extractApiErrorMessage(error: ApiResponse<unknown>, fallback: string) {
@@ -250,6 +297,7 @@ dropzone.addEventListener("drop", (e) => {
     handleFileSelect(files[0]);
   }
 });
+
 
 dropzone.addEventListener("click", (e) => {
   const target = e.target as HTMLElement;
@@ -323,19 +371,14 @@ form.addEventListener("submit", async (e: Event) => {
       notifyRes,
       "HANDSHAKE FAILED",
     );
+    console.log("[Upload] Handshake successful, jobId:", notifyData.jobId);
     setStatus("PROCESSING", "Polling for result...", "processing");
 
     // 4. Poll for Result
     await pollForResult(notifyData.jobId);
   } catch (err) {
     const message = err instanceof Error ? err.message : "PROCESS FAILED";
-    setStatus("ERROR", message.toUpperCase(), "error");
-    processingIndicator.classList.remove("active");
-    // Keep comparison visible if we have a preview, only show placeholder if no preview
-    if (!previewImage.src) {
-      displayPlaceholder.style.display = "block";
-      comparisonSection.classList.remove("visible");
-    }
+    showError(message.toUpperCase());
   } finally {
     updateButtonStates();
   }
@@ -345,11 +388,16 @@ form.addEventListener("submit", async (e: Event) => {
 updateButtonStates();
 
 async function pollForResult(jobId: number): Promise<void> {
+  console.log("[Polling] Starting for job:", jobId);
   return new Promise((resolve, reject) => {
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${STATUS_URL}/${jobId}`);
+        const url = `${STATUS_URL}/${jobId}`;
+        console.log("[Polling] Fetching status from:", url);
+        const res = await fetch(url);
+
         if (!res.ok) {
+          console.error("[Polling] Fetch failed with status:", res.status);
           clearInterval(interval);
           const errorPayload =
             (await res.json()) as ApiResponse<StatusResponse>;
@@ -358,22 +406,30 @@ async function pollForResult(jobId: number): Promise<void> {
         }
 
         const data = await readApiResponse<StatusResponse>(res, "POLL ERROR");
+        console.log("[Polling] Current status:", data.status);
 
         if (data.status === "completed" && data.processedUrl) {
+          console.log("[Polling] Job completed!");
           clearInterval(interval);
           showResult(data.processedUrl);
           resolve();
         } else if (data.status === "failed") {
+          console.error("[Polling] Job failed");
           clearInterval(interval);
           reject(new Error("SYSTEM FAILURE"));
         } else {
+          const statusMap: Record<string, string> = {
+            pending: "Queuing for processing...",
+            processing: "Applying grayscale filters...",
+          };
           setStatus(
-            "PROCESSING",
-            `JOB ID ${data.jobId} / ${data.status.toUpperCase()}`,
+            "REFINING",
+            statusMap[data.status] || "Processing...",
             "processing",
           );
         }
       } catch (err) {
+        console.error("[Polling] Error during poll:", err);
         clearInterval(interval);
         reject(err);
       }

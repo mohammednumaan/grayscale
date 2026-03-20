@@ -3,17 +3,17 @@ import { check, fail, sleep } from "k6";
 
 const TEST_IMAGE = open("./image.jpg", "b");
 const SIGN_API_ENDPOINT = "http://localhost:3000/grayscale/uploads/sign";
-const UPLOAD_NOTIFY_ENDPOINT = "http://localhost:3000/grayscale/uploads/notify";
+const NOTIFY_ENDPOINT = "http://localhost:3000/grayscale/uploads/notify";
 const STATUS_API_ENDPOINT = "http://localhost:3000/grayscale/jobs/status";
 const STATUS_POLL_INTERVAL_SECONDS = 1;
 const STATUS_POLL_TIMEOUT_SECONDS = 30;
 
 export const options = {
-	vus: 200,
-	iterations: 500,
+	vus: 100,
+	duration: "1m",
 	thresholds: {
 		"http_req_duration{name:sign_endpoint}": ["p(95)<500"],
-		"http_req_duration{name:complete_endpoint}": ["p(95)<500"],
+		"http_req_duration{name:notify_endpoint}": ["p(95)<500"],
 		"http_req_duration{name:status_endpoint}": ["p(95)<500"],
 	},
 };
@@ -25,6 +25,7 @@ function pollJobStatus(jobId: number) {
 		const statusResponse = http.get(`${STATUS_API_ENDPOINT}/${jobId}`, {
 			tags: { name: "status_endpoint" },
 		});
+
 		if (statusResponse.error) {
 			fail(`status endpoint transport layer error: ${statusResponse.error}`);
 		}
@@ -55,10 +56,12 @@ function pollJobStatus(jobId: number) {
 }
 
 export default function() {
+
 	// CLIENT REQUESTS A SIGNATURE FOR SIGNED UPLOADS
 	const signedResponse = http.get(SIGN_API_ENDPOINT, {
 		tags: { name: "sign_endpoint" },
 	});
+
 	if (signedResponse.error) {
 		fail(`transport layer error: ${signedResponse.error}`);
 	}
@@ -73,6 +76,7 @@ export default function() {
 	const signedPayload = signedResponse.json();
 	const signData = signedPayload.data;
 
+
 	// CLIENT UPLOADS FILE TO CLOUDINARY USING THE SIGNATURE
 	const cloudinaryURL = `https://api.cloudinary.com/v1_1/${signData.cloud_name}/image/upload`;
 	const cloudinaryPayload = {
@@ -84,9 +88,11 @@ export default function() {
 		folder: signData.folder,
 	};
 
+
 	const uploadResponse = http.post(cloudinaryURL, cloudinaryPayload, {
 		tags: { name: "cloudinary_upload" },
 	});
+
 	if (uploadResponse.error) {
 		fail(`cloudinary upload failed: ${uploadResponse.error}`);
 	}
@@ -102,13 +108,14 @@ export default function() {
 	const cloudinaryResponse = uploadResponse.json();
 
 	const uploadNotifyResponse = http.post(
-		UPLOAD_NOTIFY_ENDPOINT,
+		NOTIFY_ENDPOINT,
 		JSON.stringify(cloudinaryResponse),
 		{
 			tags: { name: "notify_endpoint" },
 			headers: { "Content-Type": "application/json" },
 		},
 	);
+
 	if (uploadNotifyResponse.error) {
 		fail(`upload_notify transport layer error: ${uploadNotifyResponse.error}`);
 	}

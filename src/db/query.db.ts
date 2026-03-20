@@ -1,4 +1,4 @@
-import pool from "../conn/pg.conn.js";
+import { pool } from "../conn.js";
 import type { IFileJobs } from "../types/types.js";
 
 async function insertFileJob(

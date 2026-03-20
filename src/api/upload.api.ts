@@ -78,8 +78,9 @@ router.post(
 		}
 
 		const { original_filename, public_id, secure_url } = validationResult.data;
+		const url = cloudinary.url(public_id, { type: "upload", resource_type: "image" });
+		const assetExists = await fetch(url, { method: "HEAD" });
 
-		const assetExists = await cloudinary.uploader.explicit(public_id, { type: "upload", resource_type: "image" });
 		if (!assetExists) {
 			throw new BadRequestError("Asset with the given public_id does not exist in Cloudinary", "ASSET_NOT_FOUND");
 		}
