@@ -8,14 +8,18 @@ import {
 } from "../utils/response.utils.js";
 import { z } from "zod";
 import validate from "../zod/validate.js";
-import { JobStatusParamsSchema } from "../zod/status.z.js";
+import { JobStatusRequestSchema, type JobStatusRequestType, type JobStatusResponseType } from "../zod/api/status.z.js";
 
 const router = Router();
 
 router.get(
 	"/:jobId",
 	asyncErrorHandler(async (req, res) => {
-		const validationResult = validate(JobStatusParamsSchema, req.params);
+
+		const validationResult = validate<JobStatusRequestType>(
+			JobStatusRequestSchema,
+			req.params as unknown as { jobId: number }
+		);
 
 		if (!validationResult.success) {
 			throw new ValidationError(
@@ -32,7 +36,7 @@ router.get(
 			throw new NotFoundError("Job not found");
 		}
 
-		const response: Record<string, unknown> = {
+		const response: JobStatusResponseType = {
 			jobId: job.id,
 			publicId: job.public_id,
 			status: job.status,

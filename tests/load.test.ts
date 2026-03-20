@@ -1,4 +1,4 @@
-import http from "k6/http";
+import http, { Response } from "k6/http";
 import { check, fail, sleep } from "k6";
 
 const TEST_IMAGE = open("./image.jpg", "b");
@@ -18,7 +18,7 @@ export const options = {
 	},
 };
 
-function pollJobStatus(jobId) {
+function pollJobStatus(jobId: number) {
 	const startedAt = Date.now();
 
 	while (Date.now() - startedAt < STATUS_POLL_TIMEOUT_SECONDS * 1000) {
@@ -30,8 +30,8 @@ function pollJobStatus(jobId) {
 		}
 
 		const statusOk = check(statusResponse, {
-			"status response is 200": (r) => r.status === 200,
-			"status response includes jobId": (r) => r.json().data.jobId === jobId,
+			"status response is 200": (r: Response) => r.status === 200,
+			"status response includes jobId": (r: Response) => r.json().data.jobId === jobId,
 		});
 
 		if (!statusOk) {
@@ -64,7 +64,7 @@ export default function() {
 	}
 
 	const signOk = check(signedResponse, {
-		"signed response is 200": (r) => r.status === 200,
+		"signed response is 200": (r: Response) => r.status === 200,
 	});
 
 	if (!signOk) {
@@ -92,15 +92,13 @@ export default function() {
 	}
 
 	const uploadOk = check(uploadResponse, {
-		"upload response is 200": (r) => r.status === 200,
+		"upload response is 200": (r: Response) => r.status === 200,
 	});
 
 	if (!uploadOk) {
 		fail("request for uploading file to cloudinary failed");
 	}
 
-	// CLOUDINARY SENDS WEBHOOK NOTIFICATION TO SERVER
-	// (In reality, cloudinary sends this, but we simulate it here for testing)
 	const cloudinaryResponse = uploadResponse.json();
 
 	const uploadNotifyResponse = http.post(
@@ -116,10 +114,10 @@ export default function() {
 	}
 
 	const uploadNotifyOk = check(uploadNotifyResponse, {
-		"upload_notify response is 200": (r) => r.status === 200,
-		"upload_notify success response": (r) =>
+		"upload_notify response is 200": (r: Response) => r.status === 200,
+		"upload_notify success response": (r: Response) =>
 			r.json().message === "File metadata saved successfully",
-		"upload_notify returns jobId": (r) =>
+		"upload_notify returns jobId": (r: Response) =>
 			typeof r.json().data.jobId === "number",
 	});
 
@@ -130,7 +128,7 @@ export default function() {
 	const uploadNotifyPayload = uploadNotifyResponse.json().data;
 	const finalStatus = pollJobStatus(uploadNotifyPayload.jobId);
 	check(finalStatus, {
-		"job reaches completed status": (statusPayload) =>
-			statusPayload.status === "completed",
+		"job reaches completed status": (r: Response) =>
+			r.status === "completed",
 	});
 }

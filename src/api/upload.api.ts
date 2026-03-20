@@ -1,11 +1,8 @@
 import { Router } from "express";
 import { insertFileJob } from "../db/query.db.js";
-import type { FileJobsType } from "../types/types.js";
-import grayscaleQueue from "../conn/queue.conn.js";
-import cloudinary from "../conn/cloudinary.conn.js";
 import { v4 as uuidv4 } from "uuid";
 import env from "../env.js";
-import { ApiError, ValidationError } from "../error.js";
+import { ApiError, BadRequestError, ValidationError } from "../error.js";
 import { asyncErrorHandler } from "../middleware/error.middleware.js";
 import {
 	createApiSuccessResponse,
@@ -13,7 +10,9 @@ import {
 } from "../utils/response.utils.js";
 import { z } from "zod";
 import validate from "../zod/validate.js";
-import { CloudinaryUploadResponseSchema } from "../zod/cloudinary.z.js";
+import { NotifyRequestSchema, type NotifyRequestType, type NotifyResponseType, type SignResponseType } from "../zod/api/upload.z.js";
+import type { IFileJobs } from "../types/types.js";
+import { cloudinary, grayscaleQueue } from "../conn.js";
 
 const router = Router();
 
@@ -41,21 +40,23 @@ router.get(
 			folder,
 		};
 
-		const signature = await cloudinary.utils.api_sign_request(
+		const signature = cloudinary.utils.api_sign_request(
 			paramsToSign,
 			apiSecret,
 		);
 
+		const response: SignResponseType = {
+			signature,
+			public_id,
+			folder,
+			timestamp: timeStamp,
+			cloud_name: cloudName,
+			api_key: apiKey,
+		}
+
 		return sendApiResponse(
 			res,
-			createApiSuccessResponse("Signature generated successfully", 200, {
-				signature,
-				public_id,
-				folder,
-				timestamp: timeStamp,
-				cloud_name: cloudName,
-				api_key: apiKey,
-			}),
+			createApiSuccessResponse("Signature generated successfully", 200, response),
 		);
 	}),
 );
@@ -63,7 +64,10 @@ router.get(
 router.post(
 	"/notify",
 	asyncErrorHandler(async (req, res) => {
-		const validationResult = validate(CloudinaryUploadResponseSchema, req.body);
+		const validationResult = validate<NotifyRequestType>(
+			NotifyRequestSchema,
+			req.body
+		);
 
 		if (!validationResult.success) {
 			throw new ValidationError(
@@ -75,7 +79,12 @@ router.post(
 
 		const { original_filename, public_id, secure_url } = validationResult.data;
 
-		const fileJob: FileJobsType = await insertFileJob({
+		const assetExists = await cloudinary.uploader.explicit(public_id, { type: "upload", resource_type: "image" });
+		if (!assetExists) {
+			throw new BadRequestError("Asset with the given public_id does not exist in Cloudinary", "ASSET_NOT_FOUND");
+		}
+
+		const fileJob: IFileJobs = await insertFileJob({
 			public_id,
 			filename: original_filename,
 			original_file_path: secure_url,
@@ -99,12 +108,14 @@ router.post(
 			},
 		);
 
+		const response: NotifyResponseType = {
+			filename: original_filename,
+			jobId: fileJob.id,
+		};
+
 		return sendApiResponse(
 			res,
-			createApiSuccessResponse("File metadata saved successfully", 200, {
-				filename: original_filename,
-				jobId: fileJob.id,
-			}),
+			createApiSuccessResponse("File metadata saved successfully", 200, response)
 		);
 	}),
 );

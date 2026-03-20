@@ -12,7 +12,7 @@ interface ErrorValidationType {
 
 export default function validate<T>(
 	schema: z.ZodType<T>,
-	inputs: unknown,
+	inputs: T,
 ): SuccessValidationType<T> | ErrorValidationType {
 	const result = schema.safeParse(inputs);
 
